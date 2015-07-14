@@ -16,6 +16,48 @@ DbWrap++FB makes use of C++ features available only in the C++11
 standard of the C++ programming language, thus a C++11 capable
 compiler is required.
 
+## Usage
+
+    #include "DbConnection.h"
+    #include "DbStatement.h"
+    #include "DbRowProxy.h"
+    #include <iostream>
+    ....
+    using namespace fb;
+    using namespace std;
+
+    DbConnection connection(DATABASE_NAME);
+    DbStatement statement = connection.createStatement(
+        "SELECT first_name, last_name FROM employee");
+
+    for (DbStatement::Iterator i = statement.iterate();
+         i != statement.end(); ++i) {
+        DbRowProxy row = *i;
+        cout << "First name: " << row.getText(0) << "\n"
+             << "Last name: " << row.getText(1) << "\n";
+    }
+    ....
+    connection.executeUpdate(
+        "INSERT INTO employee (first_name, last_name, phone_ext) "
+        "VALUES ('John', 'Doe', '5555')");
+    ....
+    statement = dbc.createStatement(
+            "INSERT INTO employee (first_name, last_name, phone_ext) "
+            "VALUES (?, ?, ?)");
+
+    statement.setText(1, "Jane");
+    statement.setText(2, "Doe");
+    statement.setText(3, "6666");
+    statement.execute();
+
+    statement.setText(1, "James");
+    statement.setText(2, "Pipo");
+    statement.setText(3, "7777");
+    statement.execute();
+
+    // statement transaction will be committed when the statement is
+    // either closed or destroyed automatically
+    ....
 
 ## Tasks
 
