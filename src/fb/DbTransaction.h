@@ -47,6 +47,7 @@ public:
     void commit();
     void commitRetain();
     void rollback();
+    void rollbackRetain();
 
     FbApiHandle *nativeHandle();
 

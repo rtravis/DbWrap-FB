@@ -124,6 +124,20 @@ void DbTransaction::commit()
     assert(transaction_ == 0);
 }
 
+void DbTransaction::commitRetain()
+{
+    if (transaction_ == 0) {
+        // a transaction was not started
+        return;
+    }
+
+    ISC_STATUS_ARRAY status;
+    if (isc_commit_retaining(status, &transaction_)) {
+        throw FbException("failed to commit transaction!", status);
+    }
+    assert(transaction_ != 0);
+}
+
 void DbTransaction::rollback()
 {
     if (transaction_ == 0) {
@@ -138,7 +152,7 @@ void DbTransaction::rollback()
     assert(transaction_ == 0);
 }
 
-void DbTransaction::commitRetain()
+void DbTransaction::rollbackRetain()
 {
     if (transaction_ == 0) {
         // a transaction was not started
@@ -146,8 +160,8 @@ void DbTransaction::commitRetain()
     }
 
     ISC_STATUS_ARRAY status;
-    if (isc_commit_retaining(status, &transaction_)) {
-        throw FbException("failed to commit transaction!", status);
+    if (isc_rollback_retaining(status, &transaction_)) {
+        throw FbException("failed to rollback transaction!", status);
     }
     assert(transaction_ != 0);
 }
