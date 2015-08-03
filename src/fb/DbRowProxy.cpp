@@ -40,6 +40,25 @@ unsigned int DbRowProxy::columnCount() const
     return row_->sqld;
 }
 
+bool DbRowProxy::fieldIsNull(unsigned int idx) const
+{
+    if (!row_) {
+        return false;
+    }
+
+    if (idx >= (unsigned int) row_->sqld) {
+        throw std::out_of_range("result field index is out of range!");
+    }
+
+    const XSQLVAR &v1 = row_->sqlvar[idx];
+    if (v1.sqlind && *v1.sqlind == -1) {
+        // the field is null
+        return true;
+    }
+
+    return false;
+}
+
 int DbRowProxy::getInt(unsigned int idx) const
 {
     int64_t n = getInt64(idx);
@@ -156,7 +175,7 @@ std::string DbRowProxy::getText(unsigned int idx) const
     const XSQLVAR &v1 = row_->sqlvar[idx];
     if (v1.sqlind && *v1.sqlind == -1) {
         // the field is null
-        buf = "[null]";
+        // buf = "[null]";
         return buf;
     }
 

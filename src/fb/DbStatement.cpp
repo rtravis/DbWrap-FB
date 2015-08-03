@@ -459,6 +459,11 @@ DbStatement::Iterator::Iterator(DbStatement *s) : st_(s)
     }
 }
 
+DbStatement::Iterator::Iterator(Iterator &&it) : st_(it.st_)
+{
+	it.st_ = nullptr;
+}
+
 DbStatement::Iterator::~Iterator()
 {
 }

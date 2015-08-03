@@ -36,10 +36,15 @@ public:
     {
         friend class DbStatement;
         public:
+            Iterator(Iterator &&it);
             ~Iterator();
+
+
+            // C++ like forward iterator interface
             Iterator &operator++();
             bool operator!=(const Iterator &other) const;
             DbRowProxy operator*();
+
         private:
             Iterator(DbStatement *s);
             DbStatement *st_;

@@ -35,6 +35,7 @@ public:
     explicit operator bool() const;
 
     unsigned int columnCount() const;
+    bool fieldIsNull(unsigned int idx) const;
     int getInt(unsigned int idx) const;
     int64_t getInt64(unsigned int idx) const;
     std::string getText(unsigned int idx) const;
