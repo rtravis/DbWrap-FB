@@ -280,6 +280,23 @@ void DbStatement::createBoundParametersBlock()
     }
 }
 
+void DbStatement::setNull(unsigned int idx)
+{
+    assert(statement_ != 0);
+
+    if(!inParams_) {
+        createBoundParametersBlock();
+    }
+
+    if (idx == 0 || idx > (unsigned) inParams_->sqld) {
+        throw std::out_of_range("statement parameter index is out of range!");
+    }
+
+    const XSQLVAR &v1 = inParams_->sqlvar[idx - 1];
+    assert(v1.sqlind);
+    *v1.sqlind = (ISC_SHORT) -1;
+}
+
 void DbStatement::setInt(unsigned int idx, int64_t v)
 {
     assert(statement_ != 0);
@@ -323,7 +340,10 @@ void DbStatement::setText(unsigned int idx,
         throw std::out_of_range("statement parameter index is out of range!");
     }
 
-    if (length < 0) {
+    if (!value) {
+        setNull(idx);
+        return;
+    } else if (length < 0) {
         length = (int) strlen(value);
     }
 

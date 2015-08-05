@@ -61,6 +61,12 @@ public:
     void close();
     int columCount() const;
 
+    /**
+     * set field value as null
+     * \param idx is the 1 based index of the field
+     */
+    void setNull(unsigned int idx);
+
     /** idx is 1 based index */
     void setInt(unsigned int idx, int64_t v);
 

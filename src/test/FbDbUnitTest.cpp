@@ -153,6 +153,11 @@ void populate_database()
     dbs0.setText(3, "seventy");
     dbs0.execute();
 
+    dbs0.setInt(1, 8);
+    dbs0.setNull(2);
+    dbs0.setText(3, nullptr);
+    dbs0.execute();
+
     // by committing the transaction we're not allowed to use it
     // further down in this function
     trans.commit();
@@ -178,7 +183,7 @@ void populate_database()
             printf("%02u %s\n", i, row.getText(i).c_str());
         }
     }
-    assert(count == 7);
+    assert(count == 8);
 }
 
 void select_prepared_statements_tests()
