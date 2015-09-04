@@ -29,15 +29,15 @@ class DbBlob;
 
 class DbStatement
 {
+public:
     friend class DbConnection;
 
-public:
     class Iterator
     {
         friend class DbStatement;
         public:
             Iterator(Iterator &&it);
-            ~Iterator();
+            ~Iterator() = default;
 
 
             // C++ like forward iterator interface
@@ -50,7 +50,6 @@ public:
             DbStatement *st_;
     };
 
-public:
     ~DbStatement();
     DbStatement(DbStatement &&st);
     DbStatement &operator=(DbStatement &&st);
@@ -90,15 +89,14 @@ public:
 private:
     DbStatement(FbApiHandle *db, DbTransaction *tr, const char *sql);
 
-private:
     void createBoundParametersBlock();
+    XSqlVar &getSqlVarCheckIndex(unsigned int idx, bool resetNullIndicator);
 
-private:
+
     // disable copying
     DbStatement(const DbStatement&) = delete;
     DbStatement &operator=(const DbStatement&) = delete;
 
-private:
     /** output column descriptions, pointer to XSQLDA */
     SqlDescriptorArea *results_;
     /** buffer to hold result field values in the XSQLDA */

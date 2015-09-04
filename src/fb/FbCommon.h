@@ -32,6 +32,11 @@ typedef unsigned int FbApiHandle;
  */
 struct SqlDescriptorArea;
 
+/**
+ * XSqlVar is a placeholder for XSQLVAR
+ */
+struct XSqlVar;
+
 /** SQL dialect used throughout the program */
 constexpr int FB_SQL_DIALECT = 3;
 

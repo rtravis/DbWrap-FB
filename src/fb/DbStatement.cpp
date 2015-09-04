@@ -280,10 +280,11 @@ void DbStatement::createBoundParametersBlock()
     }
 }
 
-void DbStatement::setNull(unsigned int idx)
+/** idx should be 1 based index */
+XSqlVar &DbStatement::getSqlVarCheckIndex(unsigned int idx,
+                                          bool resetNullIndicator)
 {
     assert(statement_ != 0);
-
     if(!inParams_) {
         createBoundParametersBlock();
     }
@@ -292,24 +293,25 @@ void DbStatement::setNull(unsigned int idx)
         throw std::out_of_range("statement parameter index is out of range!");
     }
 
-    const XSQLVAR &v1 = inParams_->sqlvar[idx - 1];
+    XSQLVAR &v1 = inParams_->sqlvar[idx - 1];
+    if (resetNullIndicator) {
+        if ((v1.sqltype & 1) && *v1.sqlind < 0) {
+            *v1.sqlind = 0;
+        }
+    }
+    return (XSqlVar&) v1;
+}
+
+void DbStatement::setNull(unsigned int idx)
+{
+    XSQLVAR &v1 = getSqlVarCheckIndex(idx, false);
     assert(v1.sqlind);
     *v1.sqlind = (ISC_SHORT) -1;
 }
 
 void DbStatement::setInt(unsigned int idx, int64_t v)
 {
-    assert(statement_ != 0);
-
-    if(!inParams_) {
-        createBoundParametersBlock();
-    }
-
-    if (idx == 0 || idx > (unsigned) inParams_->sqld) {
-        throw std::out_of_range("statement parameter index is out of range!");
-    }
-
-    const XSQLVAR &v1 = inParams_->sqlvar[idx - 1];
+    XSQLVAR &v1 = getSqlVarCheckIndex(idx, true);
     switch (v1.sqltype & ~1) {
     case SQL_SHORT:
         *((ISC_SHORT*) v1.sqldata) = v;
@@ -330,24 +332,16 @@ void DbStatement::setText(unsigned int idx,
                           const char *value,
                           int length /* = -1 */)
 {
-    assert(statement_ != 0);
-
-    if(!inParams_) {
-        createBoundParametersBlock();
-    }
-
-    if (idx == 0 || idx > (unsigned) inParams_->sqld) {
-        throw std::out_of_range("statement parameter index is out of range!");
-    }
-
     if (!value) {
         setNull(idx);
         return;
-    } else if (length < 0) {
+    }
+
+    if (length < 0) {
         length = (int) strlen(value);
     }
 
-    const XSQLVAR &v1 = inParams_->sqlvar[idx - 1];
+    XSQLVAR &v1 = getSqlVarCheckIndex(idx, true);
     FbVarchar *vc;
 
     switch (v1.sqltype & ~1) {
@@ -378,17 +372,7 @@ void DbStatement::setText(unsigned int idx,
  */
 void DbStatement::setBlob(unsigned int idx, const DbBlob &blob)
 {
-    assert(statement_ != 0);
-
-    if(!inParams_) {
-        createBoundParametersBlock();
-    }
-
-    if (idx == 0 || idx > (unsigned) inParams_->sqld) {
-        throw std::out_of_range("statement parameter index is out of range!");
-    }
-
-    const XSQLVAR &v1 = inParams_->sqlvar[idx - 1];
+    XSQLVAR &v1 = getSqlVarCheckIndex(idx, true);
     ISC_QUAD *blobId;
 
     switch (v1.sqltype & ~1) {
@@ -482,10 +466,6 @@ DbStatement::Iterator::Iterator(DbStatement *s) : st_(s)
 DbStatement::Iterator::Iterator(Iterator &&it) : st_(it.st_)
 {
 	it.st_ = nullptr;
-}
-
-DbStatement::Iterator::~Iterator()
-{
 }
 
 DbStatement::Iterator &DbStatement::Iterator::operator++()

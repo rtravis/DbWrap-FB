@@ -33,6 +33,10 @@ struct SqlDescriptorArea : public XSQLDA
 {
 };
 
+struct XSqlVar : public XSQLVAR
+{
+};
+
 } /* namespace fb */
 
 #endif /* DBWRAP__FB_FBINTERNALS_H_ */

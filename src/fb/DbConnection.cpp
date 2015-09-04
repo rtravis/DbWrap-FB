@@ -115,8 +115,6 @@ bool DbConnection::connect(const char *dbFile, const DbCreateOptions *opts)
     rc = isc_attach_database(status, 0, dbFile, &db_, 0, nullptr);
     if (rc != 0) {
         throw FbException("attach database", status);
-    } else {
-        printf("Attached to database: '%s'.\n", dbFile);
     }
     return true;
 }
