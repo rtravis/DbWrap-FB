@@ -14,15 +14,19 @@
  */
 
 #include "DbStatement.h"
-#include <ibase.h>
-#include "FbException.h"
-#include <cassert>
-#include <string.h>
-#include "DbRowProxy.h"
-#include "FbInternals.h"
-#include "DbTransaction.h"
+
 #include "DbBlob.h"
+#include "DbRowProxy.h"
+#include "DbTransaction.h"
+#include "FbException.h"
+#include "FbInternals.h"
+
+#include <ibase.h>
+
+#include <cassert>
 #include <memory>
+#include <string.h>
+
 
 namespace fb
 {
@@ -53,7 +57,7 @@ unsigned char *allocateAndSetXsqldaFields(XSQLDA *sqlda)
     for (int i = 0; i != sqlda->sqld; ++i) {
         XSQLVAR &v1 = sqlda->sqlvar[i];
         //printf("Type: %d Len: %d, data: %p ind: %p, name: %s\n",
-        //		v1.sqltype, v1.sqllen, v1.sqldata, v1.sqlind, v1.sqlname);
+        //        v1.sqltype, v1.sqllen, v1.sqldata, v1.sqlind, v1.sqlname);
         fsize += pad_to_align(fsize, sizeof(ISC_SHORT));
         fsize += (2 * sizeof(ISC_SHORT));
         fsize += pad_to_align(fsize, 8);
@@ -98,7 +102,8 @@ DbStatement::DbStatement(FbApiHandle *db,
                             db_(*db),
                             trans_(tr),
                             ownsTransaction_(tr == nullptr),
-                            cursorOpened_(false)
+                            cursorOpened_(false),
+                            statementType_(0)
 {
     assert(db);
 
@@ -139,6 +144,19 @@ DbStatement::DbStatement(FbApiHandle *db,
         results_->version = SQLDA_VERSION1;
     }
 
+    const char sqlInfoRequest[] = { isc_info_sql_stmt_type };
+    char sqlInfoReply[8] = "";
+    if (isc_dsql_sql_info(status, &statement_, 1, sqlInfoRequest,
+                          sizeof(sqlInfoReply), sqlInfoReply)) {
+        throw FbException("Failed to get statement type.", status);
+    }
+
+    if (sqlInfoReply[0] != isc_info_sql_stmt_type) {
+        throw FbException("Unexpected SQL info reply.", nullptr);
+    } else {
+        statementType_ = sqlInfoReply[3];
+    }
+
     if (columns != 0 &&
         isc_dsql_describe(status, &statement_, SQLDA_VERSION1, results_)) {
         throw FbException("Failed to describe statement results.", status);
@@ -162,20 +180,22 @@ DbStatement::DbStatement(FbApiHandle *db,
 DbStatement::DbStatement(DbStatement &&st)
 {
     results_ = st.results_;
-    st.results_ = nullptr;
     fields_ = st.fields_;
-    st.fields_ = nullptr;
     inParams_ = st.inParams_;
-    st.inParams_ = nullptr;
     inFields_ = st.inFields_;
-    st.inFields_ = nullptr;
     statement_ = st.statement_;
-    st.statement_ = 0;
     db_ = st.db_;
     trans_ = st.trans_;
-    st.trans_ = nullptr;
     ownsTransaction_ = st.ownsTransaction_;
     cursorOpened_ = st.cursorOpened_;
+    statementType_ = st.statementType_;
+
+    st.results_ = nullptr;
+    st.fields_ = nullptr;
+    st.inParams_ = nullptr;
+    st.inFields_ = nullptr;
+    st.statement_ = 0;
+    st.trans_ = nullptr;
 }
 
 /** move assignment */
@@ -183,20 +203,23 @@ DbStatement &DbStatement::operator=(DbStatement &&st)
 {
     close();
     results_ = st.results_;
-    st.results_ = nullptr;
     fields_ = st.fields_;
-    st.fields_ = nullptr;
     inParams_ = st.inParams_;
-    st.inParams_ = nullptr;
     inFields_ = st.inFields_;
-    st.inFields_ = nullptr;
     statement_ = st.statement_;
-    st.statement_ = 0;
     db_ = st.db_;
     trans_ = st.trans_;
-    st.trans_ = nullptr;
     ownsTransaction_ = st.ownsTransaction_;
     cursorOpened_ = st.cursorOpened_;
+    statementType_ = st.statementType_;
+
+    st.results_ = nullptr;
+    st.fields_ = nullptr;
+    st.inParams_ = nullptr;
+    st.inFields_ = nullptr;
+    st.statement_ = 0;
+    st.trans_ = nullptr;
+
     return *this;
 }
 
@@ -392,8 +415,17 @@ void DbStatement::execute()
 {
     assert(statement_ != 0);
     ISC_STATUS_ARRAY status;
-    if (isc_dsql_execute(status, trans_->nativeHandle(), &statement_,
-                         1, inParams_)) {
+    ISC_STATUS rc;
+
+    if (statementType_ == isc_info_sql_stmt_select) {
+        rc = isc_dsql_execute(status, trans_->nativeHandle(), &statement_,
+                              1, inParams_);
+    } else {
+        rc = isc_dsql_execute2(status, trans_->nativeHandle(), &statement_,
+                              1, inParams_, results_);
+    }
+
+    if (rc != 0) {
         throw FbException("Failed to execute statement.", status);
     }
 }
@@ -443,6 +475,11 @@ DbStatement::Iterator::Iterator(DbStatement *s) : st_(s)
 
     st_->execute();
 
+    if (st_->statementType_ != isc_info_sql_stmt_select) {
+        // no fetch required, isc_dsql_execute2 got the results into results_
+        return;
+    }
+
     ISC_STATUS_ARRAY status;
     ISC_STATUS rc = isc_dsql_fetch(status, &st_->statement_,
                                     1, st_->results_);
@@ -465,12 +502,18 @@ DbStatement::Iterator::Iterator(DbStatement *s) : st_(s)
 
 DbStatement::Iterator::Iterator(Iterator &&it) : st_(it.st_)
 {
-	it.st_ = nullptr;
+    it.st_ = nullptr;
 }
 
 DbStatement::Iterator &DbStatement::Iterator::operator++()
 {
     assert(st_ != 0);
+
+    if (st_->statementType_ != isc_info_sql_stmt_select) {
+        // we reached the end
+        st_ = nullptr;
+        return *this;
+    }
 
     ISC_STATUS_ARRAY status;
     ISC_STATUS rc = isc_dsql_fetch(status, &st_->statement_,

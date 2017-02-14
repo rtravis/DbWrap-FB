@@ -50,10 +50,10 @@ struct DbCreateOptions
     DbObjectInfo const * const db_schema_;
 
     /** Initialise with the create options with sensible defaults. */
-    DbCreateOptions(int page_size = 8192,
-                    bool forced_writes = false,
-                    const DbObjectInfo *initial_schema = nullptr) :
-                page_size_(page_size),
+    explicit DbCreateOptions(int page_size = 8192,
+                             bool forced_writes = false,
+                             const DbObjectInfo *initial_schema = nullptr)
+              : page_size_(page_size),
                 forced_writes_(forced_writes ? 1 : 0),
                 db_schema_(initial_schema)
     {
@@ -61,7 +61,7 @@ struct DbCreateOptions
 };
 
 
-class DbConnection
+class DbConnection final
 {
 public:
     // all these methods may throw FbException in case of an error
@@ -72,6 +72,7 @@ public:
                  const DbCreateOptions *opts = nullptr);
 
     ~DbConnection();
+
     void executeUpdate(const char *updateSql,
                        DbTransaction *transaction = nullptr);
 

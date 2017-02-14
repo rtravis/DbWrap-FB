@@ -113,6 +113,8 @@ private:
     DbTransaction *trans_;
     bool ownsTransaction_;
     bool cursorOpened_;
+    /** one of the "isc_info_sql_stmt_*" values */
+    char statementType_;
 };
 
 } /* namespace fb */

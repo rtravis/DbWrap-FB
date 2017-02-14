@@ -119,8 +119,8 @@ bool DbConnection::connect(const char *dbName, const char *server,
     } else {
         // no user and password, trusted authorisation, maybe an embedded database
         spb_buffer.append(1, (char) isc_dpb_trusted_auth);
-        spb_buffer.append(1, (char) 1);
-        spb_buffer.append(1, (char) 1);
+        spb_buffer.append(1, (char) 1); // size = 1
+        spb_buffer.append(1, (char) 1); // value = 1 (yes)
     }
 
     if (isc_create_database(status, 0, connectionString.c_str(),
