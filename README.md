@@ -18,15 +18,17 @@ compiler is required.
 
 ## Usage
 
+```cpp
     #include "DbConnection.h"
     #include "DbStatement.h"
     #include "DbRowProxy.h"
+
     #include <iostream>
-    ....
+    // ....
     using namespace fb;
     using namespace std;
 
-    DbConnection connection(DATABASE_NAME);
+    DbConnection connection(DATABASE_NAME, "localhost", "sysdba", "masterkey");
     DbStatement statement = connection.createStatement(
         "SELECT first_name, last_name FROM employee");
 
@@ -36,11 +38,11 @@ compiler is required.
         cout << "First name: " << row.getText(0) << "\n"
              << "Last name: " << row.getText(1) << "\n";
     }
-    ....
+    // ....
     connection.executeUpdate(
         "INSERT INTO employee (first_name, last_name, phone_ext) "
         "VALUES ('John', 'Doe', '5555')");
-    ....
+    // ....
     statement = dbc.createStatement(
             "INSERT INTO employee (first_name, last_name, phone_ext) "
             "VALUES (?, ?, ?)");
@@ -57,7 +59,8 @@ compiler is required.
 
     // statement transaction will be committed when the statement is
     // either closed or destroyed automatically
-    ....
+    // ....
+```
 
 ## Tasks
 
