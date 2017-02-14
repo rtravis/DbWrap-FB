@@ -11,18 +11,25 @@
  * under the terms and conditions of the Lesser GNU General
  * Public License version 2.1
  */
-#include "DbConnection.h"
-#include <stdexcept>
-#include <iostream>
-#include "DbTransaction.h"
-#include <unistd.h>
-#include "FbException.h"
-#include "DbStatement.h"
-#include "DbRowProxy.h"
-#include <cassert>
 #include "DbBlob.h"
+#include "DbConnection.h"
+#include "DbRowProxy.h"
+#include "DbStatement.h"
+#include "DbTransaction.h"
+#include "FbException.h"
 
-static const char DB_NAME[] = "/tmp/DbWrap++FB_LKzgBZOx.fdb";
+#include <cassert>
+#include <iostream>
+#include <stdexcept>
+#include <cstring>
+#include <unistd.h>
+
+
+static char g_dbName[200] = "/tmp/DbWrap++FB_LKzgBZOx.fdb";
+static char g_dbServer[200] = "localhost";
+static char g_dbUserName[100] = "sysdba";
+static char DB_PASSWORD[32] = "masterkey";
+
 
 namespace fbunittest
 {
@@ -31,19 +38,19 @@ using namespace fb;
 
 void create_database()
 {
-    if (access(DB_NAME, F_OK) == 0) {
-        unlink(DB_NAME);
+    if (access(g_dbName, F_OK) == 0) {
+        unlink(g_dbName);
     }
-    DbConnection dbc(DB_NAME);
+    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
 }
 
 void attach_database()
 {
-    if (access(DB_NAME, F_OK) != 0) {
+    if (access(g_dbName, F_OK) != 0) {
         create_database();
     }
 
-    DbConnection dbc(DB_NAME);
+    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
 }
 
 void drop_table_if_exists(DbConnection &db,
@@ -72,7 +79,7 @@ void drop_table_if_exists(DbConnection &db,
 void populate_database()
 {
     // create or attach database
-    DbConnection dbc(DB_NAME);
+    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
     DbTransaction trans(dbc.nativeHandle(), 1);
 
     drop_table_if_exists(dbc, trans, "TEST1");
@@ -189,7 +196,7 @@ void populate_database()
 void select_prepared_statements_tests()
 {
     int count = 0;
-    DbConnection dbc(DB_NAME);
+    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
 
     DbTransaction tr2(dbc.nativeHandle(), 1);
 
@@ -239,7 +246,7 @@ void select_prepared_statements_tests()
 void blob_tests()
 {
     // create or attach database
-    DbConnection dbc(DB_NAME);
+    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
     DbTransaction trans(dbc.nativeHandle(), 1);
     drop_table_if_exists(dbc, trans, "MEMO1");
 
@@ -299,7 +306,7 @@ void blob_tests()
 
 void print_all_datatypes()
 {
-    DbConnection dbc(DB_NAME);
+    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
     DbTransaction trans(dbc.nativeHandle(), 1);
 
     drop_table_if_exists(dbc, trans, "ATTRIBUTE_VALUE");
@@ -353,13 +360,86 @@ void print_all_datatypes()
     }
 }
 
+void execute_procedure_tests()
+{
+    // create or attach database
+    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
+    DbTransaction trans(dbc.nativeHandle(), 1);
+
+    drop_table_if_exists(dbc, trans, "TEST1");
+
+    // create a test table
+    dbc.executeUpdate(
+            "CREATE TABLE TEST1 ("
+                "IID    INTEGER, "
+                "I64_1  BIGINT, "
+                "VC5    VARCHAR(5), "
+                "I64V_2 BIGINT, "
+                "VAL4   VARCHAR(29) DEFAULT '', "
+                "TS     TIMESTAMP DEFAULT 'NOW', "
+                "CONSTRAINT PK_TEST1 PRIMARY KEY (IID))");
+
+    dbc.executeUpdate("GRANT ALL ON TEST1 TO PUBLIC WITH GRANT OPTION");
+
+    // test prepared statements
+    DbStatement dbs0 = dbc.createStatement(
+            "INSERT INTO TEST1 (IID, I64_1, VC5) VALUES (?, ?, ?) RETURNING (IID)",
+            &trans);
+
+    dbs0.setInt(1, 6);
+    dbs0.setInt(2, 60);
+    dbs0.setText(3, "sixty");
+    dbs0.execute();
+
+    dbs0.setInt(1, 7);
+    dbs0.setInt(2, 70);
+    dbs0.setText(3, "seventy");
+    dbs0.execute();
+
+    dbs0.setInt(1, 8);
+    dbs0.setNull(2);
+    dbs0.setText(3, nullptr);
+    DbRowProxy executeResultRow = dbs0.uniqueResult();
+    if (executeResultRow) {
+        printf("unique result returned IID: %d\n", executeResultRow.getInt(0));
+        if (executeResultRow.getInt(0) != 8) {
+            throw std::runtime_error("INSERT ... RETURNING uniqueResult failure.");
+        }
+    } else {
+        throw std::runtime_error("INSERT ... RETURNING uniqueResult failure.");
+    }
+
+    // by committing the transaction we're not allowed to use it
+    // further down in this function
+    trans.commit();
+}
+
 } // namespace fbunittest
 
 
-int main (int argc, char** argv) try
+int main (int argc, char *argv[]) try
 {
     using namespace fb;
     using namespace fbunittest;
+
+    for (int i = 1; i < argc; ++i) {
+        if (strcmp(argv[i], "-server") == 0 && (i + 1) < argc) {
+            snprintf(g_dbServer, sizeof(g_dbServer), argv[i + 1]);
+            ++i;
+        } else if (strcmp(argv[i], "-name") == 0 && (i + 1) < argc) {
+            snprintf(g_dbName, sizeof(g_dbName), argv[i + 1]);
+            ++i;
+        } else if (strcmp(argv[i], "-user") == 0 && (i + 1) < argc) {
+            snprintf(g_dbUserName, sizeof(g_dbUserName), argv[i + 1]);
+            ++i;
+        } else  if (strcmp(argv[i], "-password") == 0 && (i + 1) < argc) {
+            snprintf(DB_PASSWORD, sizeof(DB_PASSWORD), argv[i + 1]);
+            ++i;
+        } else {
+            printf("Unknown parameter: '%s'\n", argv[i]);
+            return 1;
+        }
+    }
 
     create_database();
     attach_database();
@@ -367,6 +447,7 @@ int main (int argc, char** argv) try
     select_prepared_statements_tests();
     blob_tests();
     print_all_datatypes();
+    execute_procedure_tests();
     std::cout << "Firebird API Test completed successfully.\n";
 
     return 0;
@@ -377,3 +458,4 @@ int main (int argc, char** argv) try
     std::cerr << "unexpected exception, test failed: \n";
     return 1;
 }
+
