@@ -37,7 +37,7 @@ struct DbObjectInfo
 struct DbCreateOptions
 {
     /** page size should be 1024, 2048, 4096, 8192 or 16384 */
-    int page_size_;
+    int const page_size_;
 
     /**
      * synchronous or asynchronous writes (1 or 0)
@@ -45,9 +45,9 @@ struct DbCreateOptions
      * synchronous writes are safer but slower. forced_writes_
      * should be set to 1 for synchronous writes or to 0 otherwise.
      */
-    short forced_writes_;
+    short const forced_writes_;
 
-    const DbObjectInfo *db_schema_;
+    DbObjectInfo const * const db_schema_;
 
     /** Initialise with the create options with sensible defaults. */
     DbCreateOptions(int page_size = 8192,
@@ -60,11 +60,15 @@ struct DbCreateOptions
     }
 };
 
+
 class DbConnection
 {
 public:
     // all these methods may throw FbException in case of an error
-    DbConnection(const char *dbFile,
+    DbConnection(const char *dbName,
+                 const char *server = nullptr,
+                 const char *userName = nullptr,
+                 const char *userPassword = nullptr,
                  const DbCreateOptions *opts = nullptr);
 
     ~DbConnection();
@@ -80,7 +84,9 @@ private:
     DbConnection(const DbConnection&) = delete;
     DbConnection& operator=(const DbConnection&) = delete;
 
-    bool connect(const char *dbFile, const DbCreateOptions *opts);
+    bool connect(const char *dbName, const char *server,
+                 const char *userName, const char *userPassword,
+                 const DbCreateOptions *opts);
     bool dissconnect();
 
     std::mutex connectMutex_;

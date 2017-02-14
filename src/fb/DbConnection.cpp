@@ -14,23 +14,32 @@
  */
 
 #include "DbConnection.h"
-#include <ibase.h>
-#include "FbException.h"
-#include <cassert>
-#include "DbTransaction.h"
-#include <memory>
+
 #include "DbStatement.h"
+#include "DbTransaction.h"
+#include "FbException.h"
+
+#include <ibase.h>
+
+#include <cassert>
+#include <cstring>
+#include <memory>
+
+
 
 namespace fb {
 
-DbConnection::DbConnection(const char *dbFile,
+DbConnection::DbConnection(const char *dbName,
+                           const char *server,
+                           const char *userName,
+                           const char *userPassword,
                            const DbCreateOptions *opts) : db_(0)
 {
     // check some static assertions
     static_assert(sizeof(db_) == sizeof(isc_db_handle),
                 "Invalid size for DB handle!");
 
-    connect(dbFile, opts);
+    connect(dbName, server, userName, userPassword, opts);
 }
 
 DbConnection::~DbConnection()
@@ -38,15 +47,23 @@ DbConnection::~DbConnection()
     dissconnect();
 }
 
-bool DbConnection::connect(const char *dbFile, const DbCreateOptions *opts)
+bool DbConnection::connect(const char *dbName, const char *server,
+                           const char *userName, const char *userPassword,
+                           const DbCreateOptions *opts)
 {
     if (db_ != 0) {
         dissconnect();
     }
 
-    const DbCreateOptions defaultOptions;
+    static const DbCreateOptions defaultOptions;
     if (!opts) {
         opts = &defaultOptions;
+    }
+
+    std::string connectionString(server ? server : dbName);
+    if (server) {
+        connectionString += ":";
+        connectionString += dbName;
     }
 
     std::lock_guard<std::mutex> const lg(connectMutex_);
@@ -83,8 +100,31 @@ bool DbConnection::connect(const char *dbFile, const DbCreateOptions *opts)
     spb_buffer.append(1, (char) sizeof(int));
     spb_buffer.append((const char*) &opts->page_size_, sizeof(int));
 
-    if (isc_create_database(status, 0, dbFile,
-        &db_, spb_buffer.size(), spb_buffer.data(), 0)) {
+    if (userName) {
+        size_t n = strlen(userName);
+        if (n < 128) {
+            spb_buffer.append(1, (char) isc_dpb_user_name);
+            spb_buffer.append(1, (char) n);
+            spb_buffer.append(userName, n);
+        }
+
+        if (userPassword) {
+            n = strlen(userPassword);
+            if (n < 128) {
+                spb_buffer.append(1, (char) isc_dpb_password);
+                spb_buffer.append(1, (char) n);
+                spb_buffer.append(userPassword, n);
+            }
+        }
+    } else {
+        // no user and password, trusted authorisation, maybe an embedded database
+        spb_buffer.append(1, (char) isc_dpb_trusted_auth);
+        spb_buffer.append(1, (char) 1);
+        spb_buffer.append(1, (char) 1);
+    }
+
+    if (isc_create_database(status, 0, connectionString.c_str(),
+                            &db_, (short) spb_buffer.size(), spb_buffer.data(), 0)) {
         sqlcode = isc_sqlcode(status);
         // -902 means database already exists
         if (sqlcode != -902) {
@@ -112,7 +152,8 @@ bool DbConnection::connect(const char *dbFile, const DbCreateOptions *opts)
     /*
      * Connect to the existing database
      */
-    rc = isc_attach_database(status, 0, dbFile, &db_, 0, nullptr);
+    rc = isc_attach_database(status, 0, connectionString.c_str(), &db_,
+                             (short) spb_buffer.size(), spb_buffer.data());
     if (rc != 0) {
         throw FbException("attach database", status);
     }
