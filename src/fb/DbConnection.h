@@ -16,9 +16,11 @@
 #ifndef DBWRAP__FB_SRC_DBCONNECTION_H_
 #define DBWRAP__FB_SRC_DBCONNECTION_H_
 
-#include <mutex>
 #include "FbCommon.h"
+
 #include <memory>
+#include <mutex>
+
 
 namespace fb
 {
@@ -49,13 +51,19 @@ struct DbCreateOptions
 
     DbObjectInfo const * const db_schema_;
 
+    /*
+     * try to create database if it does not exist
+     */
+    bool tryToCreateDb_;
+
     /** Initialise with the create options with sensible defaults. */
     explicit DbCreateOptions(int page_size = 8192,
                              bool forced_writes = false,
                              const DbObjectInfo *initial_schema = nullptr)
               : page_size_(page_size),
                 forced_writes_(forced_writes ? 1 : 0),
-                db_schema_(initial_schema)
+                db_schema_(initial_schema),
+                tryToCreateDb_(true)
     {
     }
 };

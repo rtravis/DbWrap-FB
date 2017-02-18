@@ -24,6 +24,7 @@
 #include <cassert>
 #include <cstring>
 #include <memory>
+#include <string>
 
 
 
@@ -123,40 +124,63 @@ bool DbConnection::connect(const char *dbName, const char *server,
         spb_buffer.append(1, (char) 1); // value = 1 (yes)
     }
 
-    if (isc_create_database(status, 0, connectionString.c_str(),
-                            &db_, (short) spb_buffer.size(), spb_buffer.data(), 0)) {
-        sqlcode = isc_sqlcode(status);
-        // -902 means database already exists
-        if (sqlcode != -902) {
-            throw FbException("create database", status);
-        }
-    } else {
-        // printf("Created database: '%s'.\n", dbFile);
-        if (opts->db_schema_) {
-            // creating initial schema
-            DbTransaction tr1(&db_, 1,
-                              DefaultTransMode::Rollback,
-                              TransStartMode::StartReadWrite);
-            try {
-                for (const DbObjectInfo *i = opts->db_schema_; i->name; ++i) {
-                    executeUpdate(i->sql, &tr1);
-                }
-                tr1.commit();
-            } catch (...) {
-                throw;
-            }
-        }
-        return true;
-    }
-
     /*
-     * Connect to the existing database
+     * Try to connect to an existing database
      */
     rc = isc_attach_database(status, 0, connectionString.c_str(), &db_,
                              (short) spb_buffer.size(), spb_buffer.data());
+
     if (rc != 0) {
-        throw FbException("attach database", status);
+        sqlcode = isc_sqlcode(status);
+        // -902 in this context means database does not exist
+        if (sqlcode != -902 || !opts->tryToCreateDb_) {
+            throw FbException("attach database", status);
+        }
+    } else {
+        // we successfully attached to the database
+        return true;
     }
+
+    assert(opts->tryToCreateDb_ && rc != 0 && sqlcode == -902);
+
+    // try to create database if it does not exist
+    std::string createDbSql = "CREATE DATABASE '";
+    createDbSql.append(connectionString).append("' ");
+
+    if (userName) {
+        createDbSql.append("USER '").append(userName).append("' ");
+        if (userPassword) {
+            createDbSql.append("PASSWORD '").append(userPassword).append("' ");
+        }
+    }
+
+    createDbSql.append("PAGE_SIZE=").append(std::to_string(opts->page_size_));
+    createDbSql.append(";");
+
+    isc_tr_handle dbTransaction = 0;
+    rc = isc_dsql_execute_immediate(status, &db_, &dbTransaction,
+                                    0, createDbSql.c_str(),
+                                    FB_SQL_DIALECT, NULL);
+
+    if (rc != 0) {
+        throw FbException("create database", status);
+    }
+
+    if (opts->db_schema_) {
+        // creating initial schema
+        DbTransaction tr1(&db_, 1,
+                          DefaultTransMode::Rollback,
+                          TransStartMode::StartReadWrite);
+        try {
+            for (const DbObjectInfo *i = opts->db_schema_; i->name; ++i) {
+                executeUpdate(i->sql, &tr1);
+            }
+            tr1.commit();
+        } catch (...) {
+            throw;
+        }
+    }
+
     return true;
 }
 
