@@ -135,6 +135,8 @@ void populate_database()
     dbc.executeUpdate(
             "INSERT INTO TEST1 (IID, I64_1, VC5) VALUES (5, 50, NULL)",
             &trans);
+
+
     try {
         // a unique constraint violation should throw an exception
         dbc.executeUpdate(
@@ -165,6 +167,15 @@ void populate_database()
     dbs0.setText(3, nullptr);
     dbs0.execute();
 
+    // test prepared statements with named parameters max68
+    DbStatement dbs1 = dbc.createStatement(
+            "INSERT INTO TEST1 (IID, I64_1, VAL4) VALUES (:IID, :I64_1, :VAL4) RETURNING (IID)",
+            &trans);
+    dbs1.paramByName("IID")->setValue(100);
+    dbs1.paramByName("I64_1")->setValue(100);
+    dbs1.paramByName("VAL4")->setValue("a hundred");
+    dbs1.execute();
+
     // by committing the transaction we're not allowed to use it
     // further down in this function
     trans.commit();
@@ -190,7 +201,7 @@ void populate_database()
             printf("%02u %s\n", i, row.getText(i).c_str());
         }
     }
-    assert(count == 8);
+    assert(count == 9); // max68
 }
 
 void select_prepared_statements_tests()
@@ -241,6 +252,22 @@ void select_prepared_statements_tests()
         }
     }
     assert(count == 1);
+    
+    // test statement with named parameters
+    DbStatement dbs4 = dbc.createStatement(
+                        "SELECT r.* FROM TEST1 r WHERE r.IID=:iid", &tr2);
+
+    dbs4.paramByName("iid")->setValue(100);
+    count = 0;
+    for (DbStatement::Iterator i = dbs4.iterate(); i != dbs2.end(); ++i) {
+        DbRowProxy row = *i;
+        printf("Named parameters query %02d ------------------\n", count++);
+        for (unsigned i = 0; i != row.columnCount(); ++i) {
+            printf("%02u %s\n", i, row.getText(i).c_str());
+        }
+    }
+    assert(count == 1);
+    
 }
 
 void blob_tests()
@@ -256,6 +283,7 @@ void blob_tests()
                 "    ID    BIGINT NOT NULL, "
                 "    NAME  VARCHAR(32), "
                 "    MEMO  BLOB SUB_TYPE 1, "
+                "    MEMO_COPY  BLOB SUB_TYPE 1, "
                 "    DATA  BLOB, "
                 "    CONSTRAINT pk_memo1 PRIMARY KEY (ID)"
                 ")",
@@ -267,8 +295,8 @@ void blob_tests()
     trans.commitRetain();
 
     printf("inserting rows into table MEMO1\n");
-    const char *sql = "INSERT INTO MEMO1 (ID, NAME, MEMO, DATA) VALUES "
-                      "(?,?,?,'abcdefghijklmnopqrstuvxyz')";
+    const char *sql = "INSERT INTO MEMO1 (ID, NAME, MEMO, MEMO_COPY, DATA) VALUES "
+                      "(?,?,?, :MEMO_COPY, 'abcdefghijkl:mnopqrstuvxyz')";
 
     DbBlob blob(*dbc.nativeHandle(), *trans.nativeHandle());
     blob.write("Hello world!\n", 13);
@@ -284,6 +312,7 @@ void blob_tests()
     st.setInt(1, 1);
     st.setText(2, "val1");
     st.setBlob(3, blob);
+    st.paramByName("MEMO_COPY")->setValue(blob);
     st.execute();
 
     // repeat the insert statement with different parameters
@@ -301,6 +330,7 @@ void blob_tests()
         printf("%02d ------------------\n", count++);
         printf("%s\n", row.getBlob(2).readAll().c_str());
         printf("%s\n", row.getBlob(3).readAll().c_str());
+        printf("%s\n", row.getBlob(4).readAll().c_str());
     }
 }
 
@@ -357,6 +387,25 @@ void print_all_datatypes()
         for (unsigned i = 0; i != row.columnCount(); ++i) {
             printf("%02u %s\n", i, row.getText(i).c_str());
         }
+    }
+    
+    // re-print using named field
+    DbStatement st1 = dbc.createStatement(
+                        "SELECT r.* FROM ATTRIBUTE_VALUE r", &trans);
+    count = 0;
+    for (DbStatement::Iterator i = st1.iterate(); i != st1.end(); ++i) {
+        DbRowProxy row = *i;
+        printf("%02d ------------------\n", count++);
+
+        printf("ID     : %ld\n", row.fieldByName("ID")->asInteger());  
+        printf("ATTR_ID: %ld\n", row.fieldByName("ATTR_ID")->asInteger());  
+        printf("OBJ_ID : %ld\n", row.fieldByName("OBJ_ID")->asInteger());  
+        printf("INT_VAL: %ld\n", row.fieldByName("INT_VAL")->asInteger());  
+        printf("STR_VAL: %s\n", row.fieldByName("STR_VAL")->asString().c_str());  
+
+        printf("DATE_VAL: %s\n", row.fieldByName("DATE_VAL")->formatDate().c_str());  
+        printf("BLOB_VAL: %s\n", row.fieldByName("BLOB_VAL")->asString().c_str());  
+        printf("FLOAT_VAL: %f\n", row.fieldByName("FLOAT_VAL")->asDouble());  
     }
 }
 
