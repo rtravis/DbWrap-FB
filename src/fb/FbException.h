@@ -16,6 +16,7 @@
 #define DBWRAP__FB_FBEXCEPTION_H_
 
 #include <stdexcept>
+#include <ibase.h>
 
 namespace fb {
 
@@ -23,7 +24,7 @@ class FbException : public std::runtime_error
 {
 public:
     /** status should be an ISC_STATUS_ARRAY from ibase.h */
-    FbException(const char *operation, const long *status);
+    FbException(const char *operation, ISC_STATUS_ARRAY status); //max68
     virtual ~FbException() noexcept;
     virtual const char *what() const noexcept;
 
