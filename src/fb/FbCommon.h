@@ -16,14 +16,15 @@
 #ifndef DBWRAP__FB_FBCOMMON_H_
 #define DBWRAP__FB_FBCOMMON_H_
 
+#include <ibase.h>
+
 namespace fb
 {
 
 /**
- * FbApiHandle is an alias for FB_API_HANDLE (must be the same type as
- * FB_API_HANDLE). We use FbApiHandle so we don't have to include ibase.h
- */
-typedef unsigned int FbApiHandle;
+ * FbApiHandle is an alias for FB_API_HANDLE
+ */ 
+typedef FB_API_HANDLE FbApiHandle;
 
 /**
  * SqlDescriptorArea is a placeholder for XSQLDA. We use SqlDescriptorArea
