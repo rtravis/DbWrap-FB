@@ -171,9 +171,9 @@ void populate_database()
     DbStatement dbs1 = dbc.createStatement(
             "INSERT INTO TEST1 (IID, I64_1, VAL4) VALUES (:IID, :I64_1, :VAL4) RETURNING (IID)",
             &trans);
-    dbs1.paramByName("IID")->setValue(100);
-    dbs1.paramByName("I64_1")->setValue(100);
-    dbs1.paramByName("VAL4")->setValue("a hundred");
+    dbs1.paramByName("IID")->setInt(100);
+    dbs1.paramByName("I64_1")->setInt(100);
+    dbs1.paramByName("VAL4")->setText("a hundred");
     dbs1.execute();
 
     // by committing the transaction we're not allowed to use it
@@ -257,7 +257,7 @@ void select_prepared_statements_tests()
     DbStatement dbs4 = dbc.createStatement(
                         "SELECT r.* FROM TEST1 r WHERE r.IID=:iid", &tr2);
 
-    dbs4.paramByName("iid")->setValue(100);
+    dbs4.paramByName("iid")->setInt(100);
     count = 0;
     for (DbStatement::Iterator i = dbs4.iterate(); i != dbs2.end(); ++i) {
         DbRowProxy row = *i;
@@ -312,7 +312,7 @@ void blob_tests()
     st.setInt(1, 1);
     st.setText(2, "val1");
     st.setBlob(3, blob);
-    st.paramByName("MEMO_COPY")->setValue(blob);
+    st.paramByName("MEMO_COPY")->setBlob(blob);
     st.execute();
 
     // repeat the insert statement with different parameters
