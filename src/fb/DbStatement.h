@@ -20,6 +20,8 @@
 
 #include <memory>
 #include <unordered_map>
+#include <typeinfo>
+#include <typeindex>
 
 namespace fb
 {
@@ -136,24 +138,21 @@ private:
 public:
     StParameter(DbStatement* st, unsigned int idx): st_(st), idx_(idx){};
 
-    void setValue(int v){
+    void setInt(int64_t v){
         st_->setInt(idx_, v);
     }
-    void setValue(int64_t v){
-        st_->setInt(idx_, v);
-    }
-    void setValue(double v){
+    void setDouble(double v){
         st_->setDouble(idx_, v);
     }
-    void setValue(const char* v){
+    void setText(const char* v){
         st_->setText(idx_, v);
     }
     void setNull(){
         st_->setNull(idx_);
     }
-    void setValue(const DbBlob &v){
+    void setBlob(const DbBlob &v){
         st_->setBlob(idx_, v);
-    }
+    } 
 };
 
 } /* namespace fb */
