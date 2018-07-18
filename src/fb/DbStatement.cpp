@@ -29,7 +29,7 @@
 
 #include <algorithm>
 #include <cctype>
-
+#include <cmath>
 
 namespace fb
 {
@@ -407,6 +407,15 @@ void DbStatement::setDouble(unsigned int idx, double v) {
             break;
         case SQL_DOUBLE:
             *((double*) v1.sqldata) = v;
+            break;
+        case SQL_SHORT:
+            *((int16_t*) v1.sqldata) = (int16_t)floor( v + 0.5);
+            break;
+        case SQL_LONG:
+            *((ISC_LONG*) v1.sqldata) = (ISC_LONG)floor( v + 0.5);
+            break;
+        case SQL_INT64:
+            *((int64_t*) v1.sqldata) = (int64_t)floor( v + 0.5);
             break;
         default:
             throw std::invalid_argument("invalid data type for bound parameter!");
