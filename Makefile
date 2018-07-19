@@ -2,7 +2,7 @@ CC        := g++
 LD        := g++
 AR        := ar
 
-CPPFLAGS  := -std=c++0x -O3 -Wall -fmessage-length=0 -fPIC
+CPPFLAGS  := -std=c++14 -O3 -Wall -fmessage-length=0 -fPIC
 LDFLAGS   := -lfbclient -lpthread
 
 MODULES   := fb test
