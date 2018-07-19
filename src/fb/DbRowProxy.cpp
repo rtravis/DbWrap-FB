@@ -242,13 +242,13 @@ std::string DbRowProxy::getText(unsigned int idx) const
         break;
     case SQL_ARRAY:
         u1.iquad = ((const ISC_QUAD*) v1.sqldata);
-        snprintf(convBuf, sizeof(convBuf), "array %x:%x",
+        snprintf(convBuf, sizeof(convBuf), "array %lx:%lx",
                 u1.iquad->gds_quad_high, u1.iquad->gds_quad_low);
         buf = convBuf;
         break;
     case SQL_QUAD:
         u1.iquad = ((const ISC_QUAD*) v1.sqldata);
-        snprintf(convBuf, sizeof(convBuf), "%08x:%08x",
+        snprintf(convBuf, sizeof(convBuf), "%08lx:%08lx",
                 u1.iquad->gds_quad_high, u1.iquad->gds_quad_low);
         buf = convBuf;
         break;
