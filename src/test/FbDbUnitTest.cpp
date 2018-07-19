@@ -24,13 +24,8 @@
 #include <cstring>
 #include <unistd.h>
 
-static char g_dbName[200] = "e:\\database\\eco.gdb";
-static char g_dbServer[200] = "10.10.10.80";
-
-/*
 static char g_dbName[200] = "/tmp/DbWrap++FB_LKzgBZOx.fdb";
 static char g_dbServer[200] = "localhost";
-*/
 static char g_dbUserName[100] = "sysdba";
 static char DB_PASSWORD[32] = "masterkey";
 
