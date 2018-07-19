@@ -138,6 +138,21 @@ private:
 public:
     StParameter(DbStatement* st, unsigned int idx): st_(st), idx_(idx){};
 
+    void setValue(short int v) { st_->setInt(idx_, v); };
+    void setValue(unsigned short int v) { st_->setInt(idx_, v); };
+    void setValue(int v) { st_->setInt(idx_, v); };
+    void setValue(unsigned int v) { st_->setInt(idx_, v); };
+    void setValue(long int v) { st_->setInt(idx_, v); };
+    void setValue(unsigned long int v) { st_->setInt(idx_, v); };
+    void setValue(long long int v) { st_->setInt(idx_, v); };
+    void setValue(unsigned long long int v) { st_->setInt(idx_, v); };
+
+
+    void setValue(float v)   { st_->setDouble(idx_, v); };
+    void setValue(double v)  { st_->setDouble(idx_, v); };
+    void setValue(const char* v){ st_->setText(idx_, v); };
+    void setValue(const DbBlob &v) { st_->setBlob(idx_, v); };
+    
     void setInt(int64_t v){
         st_->setInt(idx_, v);
     }
