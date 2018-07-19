@@ -64,8 +64,8 @@ private:
 class DbField {
     //friend class DbRowProxy;
 private:
-    SqlDescriptorArea *row_;
     DbRowProxy* rowProxy;
+    SqlDescriptorArea *row_;
     unsigned int idx;
 public:
     DbField(DbRowProxy* rowProxy, SqlDescriptorArea *row, unsigned int idx) 
