@@ -28,6 +28,7 @@ static char g_dbName[200] = "/tmp/DbWrap++FB_LKzgBZOx.fdb";
 static char g_dbServer[200] = "localhost";
 static char g_dbUserName[100] = "sysdba";
 static char DB_PASSWORD[32] = "masterkey";
+static char CHARSET[20] = "UTF8";
 
 
 namespace fbunittest
@@ -40,7 +41,7 @@ void create_database()
     if (access(g_dbName, F_OK) == 0) {
         unlink(g_dbName);
     }
-    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
+    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD, CHARSET);
 }
 
 void attach_database()
@@ -49,7 +50,7 @@ void attach_database()
         create_database();
     }
 
-    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
+    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD, CHARSET);
 }
 
 void drop_table_if_exists(DbConnection &db,
@@ -78,7 +79,7 @@ void drop_table_if_exists(DbConnection &db,
 void populate_database()
 {
     // create or attach database
-    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
+    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD, CHARSET);
     DbTransaction trans(dbc.nativeHandle(), 1);
 
     drop_table_if_exists(dbc, trans, "TEST1");
@@ -88,7 +89,7 @@ void populate_database()
             "CREATE TABLE TEST1 ("
                 "IID    INTEGER, "
                 "I64_1  BIGINT, "
-                "VC5    VARCHAR(5), "
+                "VC5    VARCHAR(10), "
                 "I64V_2 BIGINT, "
                 "VAL4   VARCHAR(29) DEFAULT '', "
                 "TS     TIMESTAMP DEFAULT 'NOW', "
@@ -206,7 +207,7 @@ void populate_database()
 void select_prepared_statements_tests()
 {
     int count = 0;
-    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
+    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD, CHARSET);
 
     DbTransaction tr2(dbc.nativeHandle(), 1);
 
@@ -272,7 +273,7 @@ void select_prepared_statements_tests()
 void blob_tests()
 {
     // create or attach database
-    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
+    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD, CHARSET);
     DbTransaction trans(dbc.nativeHandle(), 1);
     drop_table_if_exists(dbc, trans, "MEMO1");
 
@@ -335,7 +336,7 @@ void blob_tests()
 
 void print_all_datatypes()
 {
-    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
+    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD, CHARSET);
     DbTransaction trans(dbc.nativeHandle(), 1);
 
     drop_table_if_exists(dbc, trans, "ATTRIBUTE_VALUE");
@@ -369,7 +370,7 @@ void print_all_datatypes()
                     '1',
                     '1',
                     '555',
-                    'abcdefg',
+                    'abcdèfghì',
                     'NOW',
                     'blob 9999',
                     '3.1415926535');
@@ -396,10 +397,10 @@ void print_all_datatypes()
         DbRowProxy row = *i;
         printf("%02d ------------------\n", count++);
 
-        printf("ID     : %lld\n", row.fieldByName("ID")->asInteger());  
-        printf("ATTR_ID: %lld\n", row.fieldByName("ATTR_ID")->asInteger());  
-        printf("OBJ_ID : %lld\n", row.fieldByName("OBJ_ID")->asInteger());  
-        printf("INT_VAL: %lld\n", row.fieldByName("INT_VAL")->asInteger());  
+        printf("ID     : %ld\n", row.fieldByName("ID")->asInteger());  
+        printf("ATTR_ID: %ld\n", row.fieldByName("ATTR_ID")->asInteger());  
+        printf("OBJ_ID : %ld\n", row.fieldByName("OBJ_ID")->asInteger());  
+        printf("INT_VAL: %ld\n", row.fieldByName("INT_VAL")->asInteger());  
         printf("STR_VAL: %s\n", row.fieldByName("STR_VAL")->asString().c_str());  
 
         printf("DATE_VAL: %s\n", row.fieldByName("DATE_VAL")->formatDate().c_str());  
@@ -411,7 +412,7 @@ void print_all_datatypes()
 void execute_procedure_tests()
 {
     // create or attach database
-    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
+    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD, CHARSET);
     DbTransaction trans(dbc.nativeHandle(), 1);
 
     drop_table_if_exists(dbc, trans, "TEST1");
@@ -421,7 +422,7 @@ void execute_procedure_tests()
             "CREATE TABLE TEST1 ("
                 "IID    INTEGER, "
                 "I64_1  BIGINT, "
-                "VC5    VARCHAR(5), "
+                "VC5    VARCHAR(20), "
                 "I64V_2 BIGINT, "
                 "VAL4   VARCHAR(29) DEFAULT '', "
                 "TS     TIMESTAMP DEFAULT 'NOW', "
