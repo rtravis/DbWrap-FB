@@ -68,6 +68,14 @@ struct DbCreateOptions
     }
 };
 
+struct DBConnectionParameters
+{
+    std::string username;
+    std::string password;
+    std::string database;
+    std::string hostname;
+    std::string charset;
+};
 
 class DbConnection final
 {
@@ -77,8 +85,10 @@ public:
                  const char *server = nullptr,
                  const char *userName = nullptr,
                  const char *userPassword = nullptr,
+                 const char *charset = nullptr,
                  const DbCreateOptions *opts = nullptr);
-
+    DbConnection();
+    
     ~DbConnection();
 
     void executeUpdate(const char *updateSql,
@@ -89,17 +99,20 @@ public:
 
     const FbApiHandle *nativeHandle() const;
 
+    static void initConnectionParameters(DBConnectionParameters &connectionParameters);
 private:
     DbConnection(const DbConnection&) = delete;
     DbConnection& operator=(const DbConnection&) = delete;
 
     bool connect(const char *dbName, const char *server,
-                 const char *userName, const char *userPassword,
+                 const char *userName, const char *userPassword,               
+                 const char *charset,
                  const DbCreateOptions *opts);
     bool dissconnect();
 
     std::mutex connectMutex_;
     FbApiHandle db_; /** database handle isc_db_handle a.k.a unsigned int */
+
 };
 
 } /* namespace fb */
