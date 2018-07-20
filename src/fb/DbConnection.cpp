@@ -29,18 +29,43 @@
 
 
 namespace fb {
+    
+static DBConnectionParameters connectionParameters_;
+
+void DbConnection::initConnectionParameters(DBConnectionParameters &connectionParameters) {
+            connectionParameters_ = connectionParameters;
+}
+
+
+DbConnection::DbConnection(){
+    db_ = 0;
+
+    // check some static assertions
+    static_assert(sizeof(db_) == sizeof(isc_db_handle),
+                "Invalid size for DB handle!");
+
+    connect(
+        connectionParameters_.database.c_str(), 
+        connectionParameters_.hostname.c_str(),
+        connectionParameters_.username.c_str(), 
+        connectionParameters_.password.c_str(), 
+        connectionParameters_.charset.c_str(),
+        nullptr
+            );
+}
 
 DbConnection::DbConnection(const char *dbName,
                            const char *server,
                            const char *userName,
                            const char *userPassword,
+                           const char *charset,
                            const DbCreateOptions *opts) : db_(0)
 {
     // check some static assertions
     static_assert(sizeof(db_) == sizeof(isc_db_handle),
                 "Invalid size for DB handle!");
 
-    connect(dbName, server, userName, userPassword, opts);
+    connect(dbName, server, userName, userPassword, charset,  opts);
 }
 
 DbConnection::~DbConnection()
@@ -49,7 +74,8 @@ DbConnection::~DbConnection()
 }
 
 bool DbConnection::connect(const char *dbName, const char *server,
-                           const char *userName, const char *userPassword,
+                           const char *userName, const char *userPassword, 
+                           const char *charset,
                            const DbCreateOptions *opts)
 {
     if (db_ != 0) {
@@ -123,7 +149,16 @@ bool DbConnection::connect(const char *dbName, const char *server,
         spb_buffer.append(1, (char) 1); // size = 1
         spb_buffer.append(1, (char) 1); // value = 1 (yes)
     }
-
+    
+    if(charset) {
+        size_t n = strlen(charset);
+        if (n < 128) {
+            spb_buffer.append(1, (char) isc_dpb_lc_ctype);
+            spb_buffer.append(1, (char) n);
+            spb_buffer.append(charset, n);
+        }
+    }
+    
     /*
      * Try to connect to an existing database
      */
@@ -155,6 +190,9 @@ bool DbConnection::connect(const char *dbName, const char *server,
     }
 
     createDbSql.append("PAGE_SIZE=").append(std::to_string(opts->page_size_));
+    if (charset)
+        createDbSql.append(" DEFAULT CHARACTER SET ").append(charset);
+    
     createDbSql.append(";");
 
     isc_tr_handle dbTransaction = 0;
