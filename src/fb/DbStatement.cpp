@@ -27,6 +27,9 @@
 #include <memory>
 #include <string.h>
 
+#include <algorithm>
+#include <cctype>
+#include <cmath>
 
 namespace fb
 {
@@ -130,8 +133,51 @@ DbStatement::DbStatement(FbApiHandle *db,
     results_->sqld = 1;
     results_->version = SQLDA_VERSION1;
 
+    // preprocess sql for named parameters
+    int i = 0;
+    int j = 0;
+    int k = 0;
+    int cntPar = 0;
+    int l = strlen(sql);
+    char pSql[l];
+    char paramName[32];
+    while (sql[i] != '\0') {
+        switch (sql[i]) {
+            case '?':
+                pSql[j++] = sql[i++];
+                ++cntPar;
+                break;
+            case '\'':
+                pSql[j++] = sql[i++];
+                while (sql[i] != '\0' && sql[i] != '\'')
+                    pSql[j++] = sql[i++];
+                if (sql[i] == '\0')
+                    throw FbException("Preprocessing SQL error.", nullptr);
+                else
+                    pSql[j++] = sql[i++];
+                break;
+            case ':':
+                k = 0;
+                pSql[j++] = '?';
+                ++i;
+                while (std::isalpha(sql[i]) || std::isdigit(sql[i]) || sql[i] == '_') {
+                    paramName[k++] = std::toupper(sql[i++]);
+                }
+                if (k > 0 && k < 32) {
+                    paramName[k] = '\0';
+                    namedParameters[paramName] = ++cntPar;
+                } else
+                    throw FbException("Preprocessing SQL error.", nullptr);
+                break;
+            default:
+                pSql[j++] = sql[i++];
+                break;
+        }
+    }
+    pSql[j] = '\0';
+    
     if (isc_dsql_prepare(status, trans_->nativeHandle(), &statement_, 0,
-                        sql, (short) FB_SQL_DIALECT, results_)) {
+                        pSql, (short) FB_SQL_DIALECT, results_)) {
         throw FbException("Failed to prepare statement.", status);
     }
 
@@ -189,6 +235,7 @@ DbStatement::DbStatement(DbStatement &&st)
     ownsTransaction_ = st.ownsTransaction_;
     cursorOpened_ = st.cursorOpened_;
     statementType_ = st.statementType_;
+    namedParameters = st.namedParameters;
 
     st.results_ = nullptr;
     st.fields_ = nullptr;
@@ -212,6 +259,7 @@ DbStatement &DbStatement::operator=(DbStatement &&st)
     ownsTransaction_ = st.ownsTransaction_;
     cursorOpened_ = st.cursorOpened_;
     statementType_ = st.statementType_;
+    namedParameters = st.namedParameters;
 
     st.results_ = nullptr;
     st.fields_ = nullptr;
@@ -348,6 +396,30 @@ void DbStatement::setInt(unsigned int idx, int64_t v)
     default:
         throw std::invalid_argument("invalid data type for bound parameter!");
         break;
+    }
+}
+
+void DbStatement::setDouble(unsigned int idx, double v) {
+    XSQLVAR &v1 = getSqlVarCheckIndex(idx, true);
+    switch (v1.sqltype & ~1) {
+        case SQL_FLOAT:
+            *((float*) v1.sqldata) = v;
+            break;
+        case SQL_DOUBLE:
+            *((double*) v1.sqldata) = v;
+            break;
+        case SQL_SHORT:
+            *((int16_t*) v1.sqldata) = (int16_t)floor( v + 0.5);
+            break;
+        case SQL_LONG:
+            *((ISC_LONG*) v1.sqldata) = (ISC_LONG)floor( v + 0.5);
+            break;
+        case SQL_INT64:
+            *((int64_t*) v1.sqldata) = (int64_t)floor( v + 0.5);
+            break;
+        default:
+            throw std::invalid_argument("invalid data type for bound parameter!");
+            break;
     }
 }
 
@@ -540,6 +612,19 @@ DbRowProxy DbStatement::Iterator::operator*()
     return DbRowProxy(st_->results_,
                       st_->db_,
                       *st_->trans_->nativeHandle());
+}
+
+StParameterPtr DbStatement::paramByName(const std::string& name) {
+    std::string Uname = name;
+    std::transform(Uname.begin(), Uname.end(), Uname.begin(),
+            [](unsigned char c) {
+                return std::toupper(c); }
+    );
+    auto it = namedParameters.find(Uname);
+    if (it == namedParameters.end())
+        throw FbException("Could not find matching parameter.", nullptr);
+
+    return std::make_unique<StParameter>(this, it->second);
 }
 
 } /* namespace fb */

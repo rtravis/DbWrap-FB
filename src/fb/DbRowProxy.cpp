@@ -21,6 +21,8 @@
 #include "DbBlob.h"
 #include "DbTimeStamp.h"
 
+#include <algorithm>
+
 namespace fb {
 
 DbRowProxy::DbRowProxy(SqlDescriptorArea *sqlda,
@@ -240,13 +242,13 @@ std::string DbRowProxy::getText(unsigned int idx) const
         break;
     case SQL_ARRAY:
         u1.iquad = ((const ISC_QUAD*) v1.sqldata);
-        snprintf(convBuf, sizeof(convBuf), "array %x:%x",
+        snprintf(convBuf, sizeof(convBuf), "array %lx:%lx",
                 u1.iquad->gds_quad_high, u1.iquad->gds_quad_low);
         buf = convBuf;
         break;
     case SQL_QUAD:
         u1.iquad = ((const ISC_QUAD*) v1.sqldata);
-        snprintf(convBuf, sizeof(convBuf), "%08x:%08x",
+        snprintf(convBuf, sizeof(convBuf), "%08lx:%08lx",
                 u1.iquad->gds_quad_high, u1.iquad->gds_quad_low);
         buf = convBuf;
         break;
@@ -301,6 +303,34 @@ DbBlob DbRowProxy::getBlob(unsigned int idx) const
 DbRowProxy::operator bool() const
 {
     return (row_ != nullptr);
+}
+
+DbFieldPtr DbRowProxy::fieldByName(const std::string& name) {
+    if (row_) {
+        auto it = fields.find(name);
+        if (it == fields.end()) {
+            std::string Uname = name;
+            std::transform(Uname.begin(), Uname.end(), Uname.begin(),
+                    [](unsigned char c) {
+                        return std::toupper(c); }
+            );
+            int16_t len = Uname.length();
+            XSQLVAR *v1;
+            for (int i = 0; i < row_->sqld; ++i) {
+                v1 = &(row_->sqlvar[i]);
+                if (v1->sqlname_length == len || v1->aliasname_length == len) {
+                    if (Uname.compare(v1->sqlname) == 0 || Uname.compare(v1->aliasname) == 0) {
+                        DbFieldPtr field = std::make_shared<DbField>(this, row_, i);
+                        fields[name] = field;
+                        return field;
+                    }
+                }
+            }
+            throw FbException("Could not find matching column.", nullptr);
+        } else
+            return it->second;
+    } else
+        throw FbException("The row is not initialized.", nullptr);
 }
 
 } /* namespace fb */

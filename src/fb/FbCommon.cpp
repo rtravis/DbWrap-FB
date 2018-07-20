@@ -14,7 +14,6 @@
  */
 
 #include "FbCommon.h"
-#include <ibase.h>
 
 namespace fb
 {

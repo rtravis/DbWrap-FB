@@ -20,7 +20,7 @@
 namespace fb {
 
 /** status should be an ISC_STATUS_ARRAY from ibase.h */
-FbException::FbException(const char *operation, const long *status) :
+FbException::FbException(const char *operation, ISC_STATUS_ARRAY status) :
                                 std::runtime_error("Firebird exception!")
 {
     if (!status) {

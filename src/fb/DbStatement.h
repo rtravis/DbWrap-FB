@@ -18,6 +18,10 @@
 #include "FbCommon.h"
 #include <cstdint>
 
+#include <memory>
+#include <unordered_map>
+#include <typeinfo>
+#include <typeindex>
 
 namespace fb
 {
@@ -26,6 +30,9 @@ namespace fb
 class DbRowProxy;
 class DbTransaction;
 class DbBlob;
+class StParameter;
+
+using StParameterPtr = std::unique_ptr<StParameter>;
 
 class DbStatement
 {
@@ -69,6 +76,9 @@ public:
     /** idx is 1 based index */
     void setInt(unsigned int idx, int64_t v);
 
+    /** idx is 1 based index */
+    void setDouble(unsigned int idx, double value);
+    
     /**
      * idx is 1 based index
      * if length is negative strlen is used to determine the length
@@ -86,7 +96,10 @@ public:
     Iterator end() const;
     DbRowProxy uniqueResult();
 
+    StParameterPtr paramByName(const std::string& name);
 private:
+    std::unordered_map<std::string, int> namedParameters;
+    
     DbStatement(FbApiHandle *db, DbTransaction *tr, const char *sql);
 
     void createBoundParametersBlock();
@@ -115,6 +128,46 @@ private:
     bool cursorOpened_;
     /** one of the "isc_info_sql_stmt_*" values */
     char statementType_;
+};
+
+class StParameter {
+    //friend DbStatement;
+private:
+    DbStatement* st_;
+    unsigned int idx_;
+public:
+    StParameter(DbStatement* st, unsigned int idx): st_(st), idx_(idx){};
+
+    void setValue(short int v) { st_->setInt(idx_, v); };
+    void setValue(unsigned short int v) { st_->setInt(idx_, v); };
+    void setValue(int v) { st_->setInt(idx_, v); };
+    void setValue(unsigned int v) { st_->setInt(idx_, v); };
+    void setValue(long int v) { st_->setInt(idx_, v); };
+    void setValue(unsigned long int v) { st_->setInt(idx_, v); };
+    void setValue(long long int v) { st_->setInt(idx_, v); };
+    void setValue(unsigned long long int v) { st_->setInt(idx_, v); };
+
+
+    void setValue(float v)   { st_->setDouble(idx_, v); };
+    void setValue(double v)  { st_->setDouble(idx_, v); };
+    void setValue(const char* v){ st_->setText(idx_, v); };
+    void setValue(const DbBlob &v) { st_->setBlob(idx_, v); };
+    
+    void setInt(int64_t v){
+        st_->setInt(idx_, v);
+    }
+    void setDouble(double v){
+        st_->setDouble(idx_, v);
+    }
+    void setText(const char* v){
+        st_->setText(idx_, v);
+    }
+    void setNull(){
+        st_->setNull(idx_);
+    }
+    void setBlob(const DbBlob &v){
+        st_->setBlob(idx_, v);
+    } 
 };
 
 } /* namespace fb */
