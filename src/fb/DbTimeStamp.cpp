@@ -45,11 +45,7 @@ std::string DbDate::iso8601Date() const
     return buf;
 }
 
-DbTime::DbTime(int iscTime) : isc_time_(iscTime)
-{
-}
-
-DbTime::DbTime(const DbTime &t) : isc_time_(t.isc_time_)
+DbTime::DbTime(unsigned int iscTime) : isc_time_(iscTime)
 {
 }
 
@@ -89,7 +85,7 @@ const DbTimeStamp::IscTimestamp &DbTimeStamp::iscTimestamp() const
 std::string DbTimeStamp::iso8601DateTime() const
 {
     struct tm tm1;
-    isc_decode_timestamp((const ISC_TIMESTAMP*) &isc_ts_, &tm1);
+    isc_decode_timestamp(reinterpret_cast<const ISC_TIMESTAMP*>(&isc_ts_), &tm1);
     char buf[24];
     snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d:%02d",
             tm1.tm_year + 1900, tm1.tm_mon + 1, tm1.tm_mday,

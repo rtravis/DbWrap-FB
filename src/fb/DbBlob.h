@@ -13,11 +13,12 @@
  * Public License version 2.1
  */
 
-#ifndef DBWRAP__FB_DB_BLOB_H_
-#define DBWRAP__FB_DB_BLOB_H_
+#ifndef DBWRAP_FB_DB_BLOB_H_
+#define DBWRAP_FB_DB_BLOB_H_
 
 #include "FbCommon.h"
 #include <string>
+
 
 namespace fb
 {
@@ -49,7 +50,7 @@ private:
     // disable copying
     DbBlob(const DbBlob&) = delete;
     DbBlob &operator=(const DbBlob&) = delete;
-private:
+
     FbQuad blob_id_;
     FbApiHandle blob_handle_;
     bool write_access_;
@@ -57,4 +58,4 @@ private:
 
 } /* namespace fb */
 
-#endif /* DBWRAP__FB_DB_BLOB_H_ */
+#endif /* DBWRAP_FB_DB_BLOB_H_ */

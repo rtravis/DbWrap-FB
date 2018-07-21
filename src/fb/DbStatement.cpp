@@ -61,7 +61,7 @@ unsigned char *allocateAndSetXsqldaFields(XSQLDA *sqlda)
         fsize += pad_to_align(fsize, sizeof(ISC_SHORT));
         fsize += (2 * sizeof(ISC_SHORT));
         fsize += pad_to_align(fsize, 8);
-        fsize += v1.sqllen;
+        fsize += static_cast<size_t>(v1.sqllen);
     }
 
     unsigned char *fields = new unsigned char[fsize];
@@ -71,17 +71,17 @@ unsigned char *allocateAndSetXsqldaFields(XSQLDA *sqlda)
 
     for (int i = 0; i != sqlda->sqld; ++i) {
         XSQLVAR &v1 = sqlda->sqlvar[i];
-        p += pad_to_align((size_t) (p - fields), sizeof(ISC_SHORT));
-        v1.sqlind = (ISC_SHORT*) p;
+        p += pad_to_align(static_cast<size_t>(p - fields), sizeof(ISC_SHORT));
+        v1.sqlind = reinterpret_cast<ISC_SHORT*>(p);
         p += sizeof(ISC_SHORT);
         if ((v1.sqltype & ~1) == SQL_VARYING) {
-            v1.sqldata = (ISC_SCHAR*) p;
+            v1.sqldata = reinterpret_cast<ISC_SCHAR*>(p);
             // tell the engine we have more space
             v1.sqllen += sizeof(ISC_SHORT);
         } else {
             p += sizeof(ISC_SHORT);
-            p += pad_to_align((size_t) (p - fields), 8);
-            v1.sqldata = (ISC_SCHAR*) p;
+            p += pad_to_align(static_cast<size_t>(p - fields), 8);
+            v1.sqldata = reinterpret_cast<ISC_SCHAR*>(p);
         }
         p += v1.sqllen;
     }
@@ -125,13 +125,13 @@ DbStatement::DbStatement(FbApiHandle *db,
         throw FbException("Failed to allocate statement.", status);
     }
 
-    results_ = (SqlDescriptorArea*) new char[XSQLDA_LENGTH(1)];
+    results_ = reinterpret_cast<SqlDescriptorArea*>(new char[XSQLDA_LENGTH(1)]);
     results_->sqln = 1;
     results_->sqld = 1;
     results_->version = SQLDA_VERSION1;
 
     if (isc_dsql_prepare(status, trans_->nativeHandle(), &statement_, 0,
-                        sql, (short) FB_SQL_DIALECT, results_)) {
+                        sql, static_cast<short>(FB_SQL_DIALECT), results_)) {
         throw FbException("Failed to prepare statement.", status);
     }
 
@@ -139,7 +139,7 @@ DbStatement::DbStatement(FbApiHandle *db,
 
     if (columns > results_->sqln) {
         delete [] results_;
-        results_ = (SqlDescriptorArea*) new char[XSQLDA_LENGTH(columns)];
+        results_ = reinterpret_cast<SqlDescriptorArea*>(new char[XSQLDA_LENGTH(columns)]);
         results_->sqln = columns;
         results_->version = SQLDA_VERSION1;
     }
@@ -275,7 +275,7 @@ void DbStatement::createBoundParametersBlock()
     assert(!inFields_);
     assert(statement_ != 0);
 
-    inParams_ = (SqlDescriptorArea*) new char[XSQLDA_LENGTH(1)];
+    inParams_ = reinterpret_cast<SqlDescriptorArea*>(new char[XSQLDA_LENGTH(1)]);
     inParams_->sqln = 1;
     inParams_->sqld = 1;
     inParams_->version = SQLDA_VERSION1;
@@ -289,7 +289,7 @@ void DbStatement::createBoundParametersBlock()
     ISC_SHORT parameters = inParams_->sqld;
     if (parameters > inParams_->sqln) {
         delete [] inParams_;
-        inParams_ = (SqlDescriptorArea*) new char[XSQLDA_LENGTH(parameters)];
+        inParams_ = reinterpret_cast<SqlDescriptorArea*>(new char[XSQLDA_LENGTH(parameters)]);
         inParams_->sqln = parameters;
         inParams_->version = SQLDA_VERSION1;
         if (isc_dsql_describe_bind(status, &statement_,
@@ -312,7 +312,7 @@ XSqlVar &DbStatement::getSqlVarCheckIndex(unsigned int idx,
         createBoundParametersBlock();
     }
 
-    if (idx == 0 || idx > (unsigned) inParams_->sqld) {
+    if (idx == 0 || idx > static_cast<unsigned>(inParams_->sqld)) {
         throw std::out_of_range("statement parameter index is out of range!");
     }
 
@@ -322,14 +322,14 @@ XSqlVar &DbStatement::getSqlVarCheckIndex(unsigned int idx,
             *v1.sqlind = 0;
         }
     }
-    return (XSqlVar&) v1;
+    return reinterpret_cast<XSqlVar&>(v1);
 }
 
 void DbStatement::setNull(unsigned int idx)
 {
     XSQLVAR &v1 = getSqlVarCheckIndex(idx, false);
     assert(v1.sqlind);
-    *v1.sqlind = (ISC_SHORT) -1;
+    *v1.sqlind = static_cast<ISC_SHORT>(-1);
 }
 
 void DbStatement::setInt(unsigned int idx, int64_t v)
@@ -337,17 +337,16 @@ void DbStatement::setInt(unsigned int idx, int64_t v)
     XSQLVAR &v1 = getSqlVarCheckIndex(idx, true);
     switch (v1.sqltype & ~1) {
     case SQL_SHORT:
-        *((ISC_SHORT*) v1.sqldata) = v;
+        *(reinterpret_cast<ISC_SHORT*>(v1.sqldata)) = static_cast<ISC_SHORT>(v);
         break;
     case SQL_LONG:
-        *((ISC_LONG*) v1.sqldata) = v;
+        *(reinterpret_cast<ISC_LONG*>(v1.sqldata)) = static_cast<ISC_LONG>(v);
         break;
     case SQL_INT64:
-        *((ISC_INT64*) v1.sqldata) = v;
+        *(reinterpret_cast<ISC_INT64*>(v1.sqldata)) = v;
         break;
     default:
         throw std::invalid_argument("invalid data type for bound parameter!");
-        break;
     }
 }
 
@@ -360,36 +359,32 @@ void DbStatement::setText(unsigned int idx,
         return;
     }
 
-    if (length < 0) {
-        length = (int) strlen(value);
-    }
-
+    size_t len = length < 0 ? strlen(value) : static_cast<size_t>(length);
     XSQLVAR &v1 = getSqlVarCheckIndex(idx, true);
     FbVarchar *vc;
 
     switch (v1.sqltype & ~1) {
     case SQL_TEXT:
-        if (v1.sqllen < length) {
-            length = v1.sqllen;
-            memcpy(v1.sqldata, value, length);
+        if (static_cast<size_t>(v1.sqllen) < len) {
+            memcpy(v1.sqldata, value, static_cast<size_t>(v1.sqllen));
         } else {
-            memcpy(v1.sqldata, value, length);
-            memset(v1.sqldata + length, ' ', v1.sqllen - length);
+            memcpy(v1.sqldata, value, len);
+            memset(v1.sqldata + len, ' ', static_cast<size_t>(v1.sqllen) - len);
         }
         break;
     case SQL_VARYING:
-        vc = (FbVarchar*) v1.sqldata;
-        if ((v1.sqllen - 2) < length) {
-            length = v1.sqllen - 2;
+        vc = reinterpret_cast<FbVarchar*>(v1.sqldata);
+        if ((v1.sqllen - 2) < static_cast<int>(len)) {
+            len = static_cast<size_t>(v1.sqllen - 2);
         }
-        vc->length = length;
-        memcpy(vc->str, value, length);
+        vc->length = static_cast<ISC_SHORT>(len);
+        memcpy(vc->str, value, len);
         break;
     default:
         throw std::invalid_argument("invalid data type for bound parameter!");
-        break;
     }
 }
+
 /**
  * idx is 1 based index
  */
@@ -400,13 +395,12 @@ void DbStatement::setBlob(unsigned int idx, const DbBlob &blob)
 
     switch (v1.sqltype & ~1) {
     case SQL_BLOB:
-        blobId = (ISC_QUAD*) v1.sqldata;
+        blobId = reinterpret_cast<ISC_QUAD*>(v1.sqldata);
         blobId->gds_quad_high = blob.getBlobId().quad_high;
         blobId->gds_quad_low = blob.getBlobId().quad_low;
         break;
     default:
         throw std::invalid_argument("invalid data type for bound parameter!");
-        break;
     }
 }
 

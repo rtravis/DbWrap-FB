@@ -33,7 +33,8 @@ DbBlob::DbBlob(FbApiHandle db, FbApiHandle trans,
 
     ISC_STATUS_ARRAY status;
     if (isc_open_blob2(status, &db, &trans, &blob_handle_,
-                      (ISC_QUAD*) blobId, 0, nullptr)) {
+            const_cast<ISC_QUAD*>(reinterpret_cast<const ISC_QUAD*>(blobId)), 0,
+            nullptr)) {
         throw FbException("Failed to open blob.", status);
     }
 }
@@ -46,7 +47,7 @@ DbBlob::DbBlob(FbApiHandle db, FbApiHandle trans) :
 {
     ISC_STATUS_ARRAY status;
     if (isc_create_blob2(status, &db, &trans, &blob_handle_,
-                         (ISC_QUAD*) &blob_id_, 0, nullptr)) {
+            reinterpret_cast<ISC_QUAD*>(&blob_id_), 0, nullptr)) {
         throw FbException("Failed to create blob.", status);
     }
 }
@@ -153,7 +154,7 @@ std::string DbBlob::readAll(unsigned int limit) const
         if ((data.size() + bytesRead) <= limit) {
             data.append(buffer, bytesRead);
         } else {
-            bytesRead = (unsigned short) (limit - data.size());
+            bytesRead = static_cast<unsigned short>(limit - data.size());
             data.append(buffer, bytesRead);
             break;
         }

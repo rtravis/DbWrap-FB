@@ -13,8 +13,8 @@
  * Public License version 2.1
  */
 
-#ifndef DBWRAP__FB_SRC_DBSTATEMENT_H_
-#define DBWRAP__FB_SRC_DBSTATEMENT_H_
+#ifndef DBWRAP_FB_SRC_DBSTATEMENT_H_
+#define DBWRAP_FB_SRC_DBSTATEMENT_H_
 #include "FbCommon.h"
 #include <cstdint>
 
@@ -119,4 +119,4 @@ private:
 
 } /* namespace fb */
 
-#endif /* DBWRAP__FB_SRC_DBSTATEMENT_H_ */
+#endif /* DBWRAP_FB_SRC_DBSTATEMENT_H_ */

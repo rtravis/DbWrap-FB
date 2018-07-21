@@ -37,7 +37,7 @@ DbTransaction::DbTransaction(
         case TransStartMode::StartReadWrite:
             start(false);
             break;
-        default:
+        case TransStartMode::DeferStart:
             break;
     }
 }
@@ -52,8 +52,9 @@ DbTransaction::~DbTransaction()
     switch (transMode_) {
         case DefaultTransMode::Rollback:
             rollback();
+            // [[fallthrough]];
+            // fall through
         case DefaultTransMode::Commit:
-        default:
             commit();
             break;
     }
@@ -68,7 +69,7 @@ void DbTransaction::start(bool readOnly /* = false */)
 
     char isc_tpb[] = {
             isc_tpb_version3,
-            (char) (readOnly ? isc_tpb_read : isc_tpb_write),
+            static_cast<char>((readOnly ? isc_tpb_read : isc_tpb_write)),
             isc_tpb_read_committed,
             isc_tpb_no_rec_version, // isc_tpb_rec_version
             isc_tpb_wait
@@ -86,8 +87,8 @@ void DbTransaction::start(bool readOnly /* = false */)
         const char *tpb_ptr;
 
         ISC_TEB(const FbApiHandle &db, size_t tpbLen, const char *tpb) :
-                    db_ptr((ISC_LONG*) &db),
-                    tpb_len((ISC_LONG) tpbLen),
+                    db_ptr(const_cast<ISC_LONG*>(reinterpret_cast<const ISC_LONG*>(&db))),
+                    tpb_len(static_cast<ISC_LONG>(tpbLen)),
                     tpb_ptr(tpb)
         {
         }
@@ -104,7 +105,7 @@ void DbTransaction::start(bool readOnly /* = false */)
 
     ISC_STATUS_ARRAY status;
     if (isc_start_multiple(status, &transaction_,
-                           (short) dbInfo.size(), &dbInfo[0])) {
+                           static_cast<short>(dbInfo.size()), &dbInfo[0])) {
         throw FbException(
                 "Failed to start transaction (isc_start_multiple)", status);
     }

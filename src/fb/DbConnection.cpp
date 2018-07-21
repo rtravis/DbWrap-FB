@@ -79,56 +79,56 @@ bool DbConnection::connect(const char *dbName, const char *server,
 
     std::string spb_buffer;
 
-    spb_buffer.append(1, (char) isc_dpb_version1);
+    spb_buffer.append(1, static_cast<char>(isc_dpb_version1));
 
 
     int sqlDialect = FB_SQL_DIALECT;
-    spb_buffer.append(1, (char) isc_dpb_sql_dialect);
-    spb_buffer.append(1, (char) sizeof(int));
-    spb_buffer.append((const char*) &sqlDialect, sizeof(int));
+    spb_buffer.append(1, static_cast<char>(isc_dpb_sql_dialect));
+    spb_buffer.append(1, static_cast<char>(sizeof(int)));
+    spb_buffer.append(reinterpret_cast<const char*>(&sqlDialect), sizeof(int));
 
     static_assert(sizeof(opts->forced_writes_) == sizeof(short),
                         "Invalid size for forced_writes_!");
 
-    spb_buffer.append(1, (char) isc_dpb_force_write);
-    spb_buffer.append(1, (char) sizeof(short));
-    spb_buffer.append((const char*) &opts->forced_writes_, sizeof(short));
+    spb_buffer.append(1, static_cast<char>(isc_dpb_force_write));
+    spb_buffer.append(1, static_cast<char>(sizeof(short)));
+    spb_buffer.append(reinterpret_cast<const char*>(&opts->forced_writes_), sizeof(short));
 
     static_assert(sizeof(opts->page_size_) == sizeof(int),
                         "Invalid size for page size!");
 
-    spb_buffer.append(1, (char) isc_dpb_page_size);
-    spb_buffer.append(1, (char) sizeof(int));
-    spb_buffer.append((const char*) &opts->page_size_, sizeof(int));
+    spb_buffer.append(1, static_cast<char>(isc_dpb_page_size));
+    spb_buffer.append(1, static_cast<char>(sizeof(int)));
+    spb_buffer.append(reinterpret_cast<const char*>(&opts->page_size_), sizeof(int));
 
     if (userName) {
         size_t n = strlen(userName);
         if (n < 128) {
-            spb_buffer.append(1, (char) isc_dpb_user_name);
-            spb_buffer.append(1, (char) n);
+            spb_buffer.append(1, static_cast<char>(isc_dpb_user_name));
+            spb_buffer.append(1, static_cast<char>(n));
             spb_buffer.append(userName, n);
         }
 
         if (userPassword) {
             n = strlen(userPassword);
             if (n < 128) {
-                spb_buffer.append(1, (char) isc_dpb_password);
-                spb_buffer.append(1, (char) n);
+                spb_buffer.append(1, static_cast<char>(isc_dpb_password));
+                spb_buffer.append(1, static_cast<char>(n));
                 spb_buffer.append(userPassword, n);
             }
         }
     } else {
         // no user and password, trusted authorisation, maybe an embedded database
-        spb_buffer.append(1, (char) isc_dpb_trusted_auth);
-        spb_buffer.append(1, (char) 1); // size = 1
-        spb_buffer.append(1, (char) 1); // value = 1 (yes)
+        spb_buffer.append(1, static_cast<char>(isc_dpb_trusted_auth));
+        spb_buffer.append(1, static_cast<char>(1)); // size = 1
+        spb_buffer.append(1, static_cast<char>(1)); // value = 1 (yes)
     }
 
     /*
      * Try to connect to an existing database
      */
     rc = isc_attach_database(status, 0, connectionString.c_str(), &db_,
-                             (short) spb_buffer.size(), spb_buffer.data());
+                             static_cast<short>(spb_buffer.size()), spb_buffer.data());
 
     if (rc != 0) {
         sqlcode = isc_sqlcode(status);

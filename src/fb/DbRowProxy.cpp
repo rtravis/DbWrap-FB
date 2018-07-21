@@ -31,13 +31,9 @@ DbRowProxy::DbRowProxy(SqlDescriptorArea *sqlda,
 {
 }
 
-DbRowProxy::~DbRowProxy()
-{
-}
-
 unsigned int DbRowProxy::columnCount() const
 {
-    return row_->sqld;
+    return static_cast<unsigned>(row_->sqld);
 }
 
 bool DbRowProxy::fieldIsNull(unsigned int idx) const
@@ -46,7 +42,7 @@ bool DbRowProxy::fieldIsNull(unsigned int idx) const
         return false;
     }
 
-    if (idx >= (unsigned int) row_->sqld) {
+    if (idx >= static_cast<unsigned int>(row_->sqld)) {
         throw std::out_of_range("result field index is out of range!");
     }
 
@@ -62,10 +58,10 @@ bool DbRowProxy::fieldIsNull(unsigned int idx) const
 int DbRowProxy::getInt(unsigned int idx) const
 {
     int64_t n = getInt64(idx);
-    if ((int) n != n) {
+    if (static_cast<int>(n) != n) {
         throw std::overflow_error("Field can't fit to a 32 bit signed integer!");
     }
-    return (int) n;
+    return static_cast<int>(n);
 }
 
 int64_t DbRowProxy::getInt64(unsigned int idx) const
@@ -74,7 +70,7 @@ int64_t DbRowProxy::getInt64(unsigned int idx) const
         return 0;
     }
 
-    if (idx >= (unsigned int) row_->sqld) {
+    if (idx >= static_cast<unsigned int>(row_->sqld)) {
         throw std::out_of_range("result field index is out of range!");
     }
 
@@ -98,59 +94,58 @@ int64_t DbRowProxy::getInt64(unsigned int idx) const
     int64_t n = 0;
     std::string buf;
 
-
     switch (v1.sqltype & ~1) {
     case SQL_TEXT:
-        buf.assign(v1.sqldata, v1.sqllen);
+        buf.assign(v1.sqldata, static_cast<size_t>(v1.sqllen));
         n = strtoll(buf.c_str(), nullptr, 0);
         break;
     case SQL_VARYING:
-        u1.ivc = (const FbVarchar*) v1.sqldata;
-        buf.assign(u1.ivc->str, (size_t) u1.ivc->length);
+        u1.ivc = reinterpret_cast<const FbVarchar*>(v1.sqldata);
+        buf.assign(u1.ivc->str, static_cast<size_t>(u1.ivc->length));
         n = strtoll(buf.c_str(), nullptr, 0);
         break;
     case SQL_SHORT:
-        n = *((const short*) v1.sqldata);
+        n = *(reinterpret_cast<const short*>(v1.sqldata));
         break;
     case SQL_LONG:
-        n = *((const ISC_LONG*) v1.sqldata);
+        n = *(reinterpret_cast<const ISC_LONG*>(v1.sqldata));
         break;
     case SQL_FLOAT:
-        n = *((const float*) v1.sqldata);
+        n = static_cast<int64_t>(*(reinterpret_cast<const float*>(v1.sqldata)));
         break;
     case SQL_DOUBLE:
-        n = *((const double*) v1.sqldata);
+        n = static_cast<int64_t>(*(reinterpret_cast<const double*>(v1.sqldata)));
         break;
     case SQL_D_FLOAT:
         // VAX double?
-        n = *((const double*) v1.sqldata);
+        n = static_cast<int64_t>(*(reinterpret_cast<const double*>(v1.sqldata)));
         break;
     case SQL_TIMESTAMP:
-        u1.its = ((const ISC_TIMESTAMP*) v1.sqldata);
-        n = ((uint64_t) u1.its->timestamp_date << 32) + u1.its->timestamp_time;
+        u1.its = (reinterpret_cast<const ISC_TIMESTAMP*>(v1.sqldata));
+        n = (static_cast<int64_t>(u1.its->timestamp_date) << 32) + u1.its->timestamp_time;
         break;
     case SQL_BLOB:
-        u1.iquad = ((const ISC_QUAD*) v1.sqldata);
-        n = ((uint64_t) u1.iquad->gds_quad_high << 32) + u1.iquad->gds_quad_low;
+        u1.iquad = (reinterpret_cast<const ISC_QUAD*>(v1.sqldata));
+        n = (static_cast<int64_t>(u1.iquad->gds_quad_high) << 32) + u1.iquad->gds_quad_low;
         break;
     case SQL_ARRAY:
-        u1.iquad = ((const ISC_QUAD*) v1.sqldata);
-        n = ((uint64_t) u1.iquad->gds_quad_high << 32) + u1.iquad->gds_quad_low;
+        u1.iquad = (reinterpret_cast<const ISC_QUAD*>(v1.sqldata));
+        n = (static_cast<int64_t>(u1.iquad->gds_quad_high) << 32) + u1.iquad->gds_quad_low;
         break;
     case SQL_QUAD:
-        u1.iquad = ((const ISC_QUAD*) v1.sqldata);
-        n = ((uint64_t) u1.iquad->gds_quad_high << 32) + u1.iquad->gds_quad_low;
+        u1.iquad = (reinterpret_cast<const ISC_QUAD*>(v1.sqldata));
+        n = (static_cast<int64_t>(u1.iquad->gds_quad_high) << 32) + u1.iquad->gds_quad_low;
         break;
     case SQL_TYPE_TIME:
-        u1.itime = ((const ISC_TIME*) v1.sqldata);
+        u1.itime = (reinterpret_cast<const ISC_TIME*>(v1.sqldata));
         n = *(u1.itime);
         break;
     case SQL_TYPE_DATE:
-        u1.idate = ((const ISC_DATE*) v1.sqldata);
+        u1.idate = (reinterpret_cast<const ISC_DATE*>(v1.sqldata));
         n = *(u1.idate);
         break;
     case SQL_INT64:
-        n = *((const ISC_INT64*) v1.sqldata);
+        n = *(reinterpret_cast<const ISC_INT64*>(v1.sqldata));
         break;
     case SQL_NULL:
     default:
@@ -167,7 +162,7 @@ std::string DbRowProxy::getText(unsigned int idx) const
         return std::string();
     }
 
-    if (idx >= (unsigned int) row_->sqld) {
+    if (idx >= static_cast<unsigned int>(row_->sqld)) {
         throw std::out_of_range("result field index is out of range!");
     }
 
@@ -193,42 +188,42 @@ std::string DbRowProxy::getText(unsigned int idx) const
 
     switch (v1.sqltype & ~1) {
     case SQL_TEXT:
-        buf.assign(v1.sqldata, v1.sqllen);
+        buf.assign(v1.sqldata, static_cast<size_t>(v1.sqllen));
         break;
     case SQL_VARYING:
-        u1.ivc = (const FbVarchar*) v1.sqldata;
-        buf.assign(u1.ivc->str, (size_t) u1.ivc->length);
+        u1.ivc = reinterpret_cast<const FbVarchar*>(v1.sqldata);
+        buf.assign(u1.ivc->str, static_cast<size_t>(u1.ivc->length));
         break;
     case SQL_SHORT:
-        u1.n = *((const short*) v1.sqldata);
+        u1.n = *(reinterpret_cast<const short*>(v1.sqldata));
         snprintf(convBuf, sizeof(convBuf), "%lld", u1.n);
         buf = convBuf;
         break;
     case SQL_LONG:
-        u1.n = *((const ISC_LONG*) v1.sqldata);
+        u1.n = *(reinterpret_cast<const ISC_LONG*>(v1.sqldata));
         snprintf(convBuf, sizeof(convBuf), "%lld", u1.n);
         buf = convBuf;
         break;
     case SQL_FLOAT:
-        u1.d = *((const float*) v1.sqldata);
+        u1.d = static_cast<double>(*(reinterpret_cast<const float*>(v1.sqldata)));
         snprintf(convBuf, sizeof(convBuf), "%g", u1.d);
         buf = convBuf;
         break;
     case SQL_DOUBLE:
-        u1.d = *((const double*) v1.sqldata);
+        u1.d = *(reinterpret_cast<const double*>(v1.sqldata));
         snprintf(convBuf, sizeof(convBuf), "%g", u1.d);
         buf = convBuf;
         break;
     case SQL_D_FLOAT:
         // VAX double?
-        u1.d = *((const double*) v1.sqldata);
+        u1.d = *(reinterpret_cast<const double*>(v1.sqldata));
         snprintf(convBuf, sizeof(convBuf), "%g", u1.d);
         buf = convBuf;
         break;
     case SQL_TIMESTAMP:
-        u1.its = ((const ISC_TIMESTAMP*) v1.sqldata);
+        u1.its = (reinterpret_cast<const ISC_TIMESTAMP*>(v1.sqldata));
         buf = DbTimeStamp(
-                (const DbTimeStamp::IscTimestamp&) *u1.its).iso8601DateTime();
+                reinterpret_cast<const DbTimeStamp::IscTimestamp&>(*u1.its)).iso8601DateTime();
         break;
     case SQL_BLOB:
         {
@@ -239,27 +234,27 @@ std::string DbRowProxy::getText(unsigned int idx) const
         }
         break;
     case SQL_ARRAY:
-        u1.iquad = ((const ISC_QUAD*) v1.sqldata);
+        u1.iquad = (reinterpret_cast<const ISC_QUAD*>(v1.sqldata));
         snprintf(convBuf, sizeof(convBuf), "array %x:%x",
                 u1.iquad->gds_quad_high, u1.iquad->gds_quad_low);
         buf = convBuf;
         break;
     case SQL_QUAD:
-        u1.iquad = ((const ISC_QUAD*) v1.sqldata);
+        u1.iquad = (reinterpret_cast<const ISC_QUAD*>(v1.sqldata));
         snprintf(convBuf, sizeof(convBuf), "%08x:%08x",
                 u1.iquad->gds_quad_high, u1.iquad->gds_quad_low);
         buf = convBuf;
         break;
     case SQL_TYPE_TIME:
-        u1.itime = ((const ISC_TIME*) v1.sqldata);
+        u1.itime = (reinterpret_cast<const ISC_TIME*>(v1.sqldata));
         buf = DbTime(*u1.itime).iso8601Time();
         break;
     case SQL_TYPE_DATE:
-        u1.idate = ((const ISC_DATE*) v1.sqldata);
+        u1.idate = (reinterpret_cast<const ISC_DATE*>(v1.sqldata));
         buf = DbDate(*u1.idate).iso8601Date();
         break;
     case SQL_INT64:
-        u1.n = *((const ISC_INT64*) v1.sqldata);
+        u1.n = *(reinterpret_cast<const ISC_INT64*>(v1.sqldata));
         snprintf(convBuf, sizeof(convBuf), "%lld", u1.n);
         buf = convBuf;
         break;
@@ -280,7 +275,7 @@ DbBlob DbRowProxy::getBlob(unsigned int idx) const
         return DbBlob(0, 0, nullptr);
     }
 
-    if (idx >= (unsigned int) row_->sqld) {
+    if (idx >= static_cast<unsigned int>(row_->sqld)) {
         throw std::out_of_range("result field index is out of range!");
     }
 
@@ -295,7 +290,7 @@ DbBlob DbRowProxy::getBlob(unsigned int idx) const
     }
 
     assert(v1.sqllen == sizeof(ISC_QUAD));
-    return DbBlob(db_, transaction_, (const FbQuad*) v1.sqldata);
+    return DbBlob(db_, transaction_, reinterpret_cast<const FbQuad*>(v1.sqldata));
 }
 
 DbRowProxy::operator bool() const

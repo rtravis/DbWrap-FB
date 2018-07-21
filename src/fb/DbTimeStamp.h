@@ -13,8 +13,8 @@
  * Public License version 2.1
  */
 
-#ifndef DBWRAP__FB_SRC_DBTIMESTAMP_H_
-#define DBWRAP__FB_SRC_DBTIMESTAMP_H_
+#ifndef DBWRAP_FB_SRC_DBTIMESTAMP_H_
+#define DBWRAP_FB_SRC_DBTIMESTAMP_H_
 
 #include <string>
 
@@ -37,8 +37,7 @@ private:
 class DbTime
 {
 public:
-    DbTime(int iscTime);
-    DbTime(const DbTime&);
+    explicit DbTime(unsigned int iscTime);
 
     unsigned int iscTime() const;
     std::string iso8601Time() const;
@@ -70,4 +69,4 @@ private:
 
 } /* namespace fb */
 
-#endif /* DBWRAP__FB_SRC_DBTIMESTAMP_H_ */
+#endif /* DBWRAP_FB_SRC_DBTIMESTAMP_H_ */

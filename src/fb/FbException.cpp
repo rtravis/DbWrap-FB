@@ -35,15 +35,15 @@ FbException::FbException(const char *operation, const long *status) :
     char buffer[1024];
     ISC_LONG sqlCode = isc_sqlcode(status);
     if (sqlCode != -999) {
-        snprintf(buffer, sizeof(buffer), "SQL Code: %d\n", (int) sqlCode);
+        snprintf(buffer, sizeof(buffer), "SQL Code: %d\n", static_cast<int>(sqlCode));
         what_ += buffer;
-        isc_sql_interprete((short) sqlCode, buffer, (short) sizeof(buffer));
+        isc_sql_interprete(static_cast<short>(sqlCode), buffer, static_cast<short>(sizeof(buffer)));
         what_ += buffer;
         what_ += "\n";
     }
 
     const ISC_STATUS *istatus = status;
-    while(fb_interpret(buffer, (unsigned int) sizeof(buffer), &istatus)) {
+    while(fb_interpret(buffer, static_cast<unsigned int>(sizeof(buffer)), &istatus)) {
         what_ += buffer;
         what_ += "\n";
     }

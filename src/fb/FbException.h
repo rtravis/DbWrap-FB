@@ -12,8 +12,8 @@
  * Public License version 2.1
  */
 
-#ifndef DBWRAP__FB_FBEXCEPTION_H_
-#define DBWRAP__FB_FBEXCEPTION_H_
+#ifndef DBWRAP_FB_FBEXCEPTION_H_
+#define DBWRAP_FB_FBEXCEPTION_H_
 
 #include <stdexcept>
 
@@ -24,6 +24,8 @@ class FbException : public std::runtime_error
 public:
     /** status should be an ISC_STATUS_ARRAY from ibase.h */
     FbException(const char *operation, const long *status);
+    FbException(const FbException&) = default;
+
     virtual ~FbException() noexcept;
     virtual const char *what() const noexcept;
 
@@ -33,4 +35,4 @@ private:
 
 } /* namespace fb */
 
-#endif /* DBWRAP__FB_FBEXCEPTION_H_ */
+#endif /* DBWRAP_FB_FBEXCEPTION_H_ */

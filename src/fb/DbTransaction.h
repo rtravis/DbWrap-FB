@@ -13,8 +13,8 @@
  * Public License version 2.1
  */
 
-#ifndef DBWRAP__FB_SRC_FB_DBTRANSACTION_H_
-#define DBWRAP__FB_SRC_FB_DBTRANSACTION_H_
+#ifndef DBWRAP_FB_SRC_FB_DBTRANSACTION_H_
+#define DBWRAP_FB_SRC_FB_DBTRANSACTION_H_
 #include "FbCommon.h"
 #include <vector>
 
@@ -31,7 +31,7 @@ enum class TransStartMode : char
 {
     DeferStart = 0,
     StartReadOnly,
-    StartReadWrite,
+    StartReadWrite
 };
 
 class DbTransaction
@@ -60,4 +60,4 @@ private:
 
 } /* namespace fb */
 
-#endif /* DBWRAP__FB_SRC_FB_DBTRANSACTION_H_ */
+#endif /* DBWRAP_FB_SRC_FB_DBTRANSACTION_H_ */

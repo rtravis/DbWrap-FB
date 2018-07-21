@@ -12,8 +12,8 @@
  * Public License version 2.1
  */
 
-#ifndef DBWRAP__FB_FBINTERNALS_H_
-#define DBWRAP__FB_FBINTERNALS_H_
+#ifndef DBWRAP_FB_FBINTERNALS_H_
+#define DBWRAP_FB_FBINTERNALS_H_
 #include <ibase.h>
 
 namespace fb {
@@ -39,4 +39,4 @@ struct XSqlVar : public XSQLVAR
 
 } /* namespace fb */
 
-#endif /* DBWRAP__FB_FBINTERNALS_H_ */
+#endif /* DBWRAP_FB_FBINTERNALS_H_ */

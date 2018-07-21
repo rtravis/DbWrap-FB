@@ -13,8 +13,8 @@
  * Public License version 2.1
  */
 
-#ifndef DBWRAP__FB_FBCOMMON_H_
-#define DBWRAP__FB_FBCOMMON_H_
+#ifndef DBWRAP_FB_FBCOMMON_H_
+#define DBWRAP_FB_FBCOMMON_H_
 
 namespace fb
 {
@@ -52,4 +52,4 @@ struct FbQuad
 
 } /* namespace fb */
 
-#endif /* DBWRAP__FB_FBCOMMON_H_ */
+#endif /* DBWRAP_FB_FBCOMMON_H_ */

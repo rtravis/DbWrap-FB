@@ -13,8 +13,8 @@
  * Public License version 2.1
  */
 
-#ifndef DBWRAP__FB_SRC_DBCONNECTION_H_
-#define DBWRAP__FB_SRC_DBCONNECTION_H_
+#ifndef DBWRAP_FB_SRC_DBCONNECTION_H_
+#define DBWRAP_FB_SRC_DBCONNECTION_H_
 
 #include "FbCommon.h"
 
@@ -49,12 +49,12 @@ struct DbCreateOptions
      */
     short const forced_writes_;
 
-    DbObjectInfo const * const db_schema_;
-
     /*
      * try to create database if it does not exist
      */
     bool tryToCreateDb_;
+
+    DbObjectInfo const * const db_schema_;
 
     /** Initialise with the create options with sensible defaults. */
     explicit DbCreateOptions(int page_size = 8192,
@@ -62,8 +62,9 @@ struct DbCreateOptions
                              const DbObjectInfo *initial_schema = nullptr)
               : page_size_(page_size),
                 forced_writes_(forced_writes ? 1 : 0),
-                db_schema_(initial_schema),
-                tryToCreateDb_(true)
+                tryToCreateDb_(true),
+                db_schema_(initial_schema)
+
     {
     }
 };
@@ -104,4 +105,4 @@ private:
 
 } /* namespace fb */
 
-#endif /* DBWRAP__FB_SRC_DBCONNECTION_H_ */
+#endif /* DBWRAP_FB_SRC_DBCONNECTION_H_ */
