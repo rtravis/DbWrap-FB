@@ -23,7 +23,12 @@ namespace fb
  * FbApiHandle is an alias for FB_API_HANDLE (must be the same type as
  * FB_API_HANDLE). We use FbApiHandle so we don't have to include ibase.h
  */
+
+#if defined(_LP64) || defined(__LP64__) || defined(__arch64__) || defined(_WIN64)
 typedef unsigned int FbApiHandle;
+#else
+typedef void *FbApiHandle;
+#endif
 
 /**
  * SqlDescriptorArea is a placeholder for XSQLDA. We use SqlDescriptorArea

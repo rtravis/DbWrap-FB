@@ -77,7 +77,8 @@ unsigned char *allocateAndSetXsqldaFields(XSQLDA *sqlda)
         if ((v1.sqltype & ~1) == SQL_VARYING) {
             v1.sqldata = reinterpret_cast<ISC_SCHAR*>(p);
             // tell the engine we have more space
-            v1.sqllen += sizeof(ISC_SHORT);
+            v1.sqllen = static_cast<ISC_SHORT>(v1.sqllen
+                    + static_cast<int>(sizeof(ISC_SHORT)));
         } else {
             p += sizeof(ISC_SHORT);
             p += pad_to_align(static_cast<size_t>(p - fields), 8);

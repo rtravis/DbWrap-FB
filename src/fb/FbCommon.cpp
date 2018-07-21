@@ -14,7 +14,9 @@
  */
 
 #include "FbCommon.h"
+
 #include <ibase.h>
+
 
 namespace fb
 {
@@ -32,4 +34,6 @@ static_assert(sizeof(FbApiHandle) == sizeof(isc_blob_handle),
                 "Invalid size for blob handle!");
 static_assert(sizeof(FbQuad) == sizeof(ISC_QUAD),
                 "size of(FbQuad) <> size of(ISC_QUAD)!");
+static_assert(sizeof(intptr_t) == sizeof(ISC_STATUS),
+                "size of(intptr_t) <> size of(ISC_STATUS)!");
 } /* namespace fb */

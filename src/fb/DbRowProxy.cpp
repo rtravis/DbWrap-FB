@@ -236,13 +236,15 @@ std::string DbRowProxy::getText(unsigned int idx) const
     case SQL_ARRAY:
         u1.iquad = (reinterpret_cast<const ISC_QUAD*>(v1.sqldata));
         snprintf(convBuf, sizeof(convBuf), "array %x:%x",
-                u1.iquad->gds_quad_high, u1.iquad->gds_quad_low);
+                static_cast<unsigned>(u1.iquad->gds_quad_high),
+                static_cast<unsigned>(u1.iquad->gds_quad_low));
         buf = convBuf;
         break;
     case SQL_QUAD:
         u1.iquad = (reinterpret_cast<const ISC_QUAD*>(v1.sqldata));
         snprintf(convBuf, sizeof(convBuf), "%08x:%08x",
-                u1.iquad->gds_quad_high, u1.iquad->gds_quad_low);
+                static_cast<unsigned>(u1.iquad->gds_quad_high),
+                static_cast<unsigned>(u1.iquad->gds_quad_low));
         buf = convBuf;
         break;
     case SQL_TYPE_TIME:
