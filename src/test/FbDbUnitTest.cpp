@@ -36,7 +36,7 @@ namespace fbunittest
 
 using namespace fb;
 
-void create_database()
+static void create_database()
 {
     if (access(g_dbName, F_OK) == 0) {
         unlink(g_dbName);
@@ -44,7 +44,7 @@ void create_database()
     DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
 }
 
-void attach_database()
+static void attach_database()
 {
     if (access(g_dbName, F_OK) != 0) {
         create_database();
@@ -53,9 +53,8 @@ void attach_database()
     DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
 }
 
-void drop_table_if_exists(DbConnection &db,
-                          DbTransaction &tr,
-                          const char *tableName)
+static void drop_table_if_exists(DbConnection &db, DbTransaction &tr,
+        const char *tableName)
 {
     assert(tableName);
 
@@ -76,7 +75,7 @@ void drop_table_if_exists(DbConnection &db,
     }
 }
 
-void populate_database()
+static void populate_database()
 {
     // create or attach database
     DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
@@ -112,7 +111,7 @@ void populate_database()
         throw std::runtime_error(
                 "successfully modified database in a read-only transaction!");
 
-    } catch (FbException &exc) {
+    } catch (FbException &) {
         // this is expected, we try to modify table in a read-only transaction
     }
 
@@ -141,7 +140,7 @@ void populate_database()
                 "INSERT INTO TEST1 (IID, I64_1, VC5) VALUES (3, 20, 'three')",
                 &trans);
         throw std::runtime_error("constraint violation should have failed");
-    } catch (FbException &exc) {
+    } catch (FbException &) {
         // OK, unique constraint violation
     }
 
@@ -186,14 +185,14 @@ void populate_database()
     for (DbStatement::Iterator i = dbs.iterate(); i != dbs.end(); ++i) {
         DbRowProxy row = *i;
         printf("%02d ------------------\n", count++);
-        for (unsigned i = 0; i != row.columnCount(); ++i) {
-            printf("%02u %s\n", i, row.getText(i).c_str());
+        for (unsigned j = 0; j != row.columnCount(); ++j) {
+            printf("%02u %s\n", j, row.getText(j).c_str());
         }
     }
     assert(count == 8);
 }
 
-void select_prepared_statements_tests()
+static void select_prepared_statements_tests()
 {
     int count = 0;
     DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
@@ -208,8 +207,8 @@ void select_prepared_statements_tests()
     for (DbStatement::Iterator i = dbs2.iterate(); i != dbs2.end(); ++i) {
         DbRowProxy row = *i;
         printf("%02d ------------------\n", count++);
-        for (unsigned i = 0; i != row.columnCount(); ++i) {
-            printf("%02u %s\n", i, row.getText(i).c_str());
+        for (unsigned j = 0; j != row.columnCount(); ++j) {
+            printf("%02u %s\n", j, row.getText(j).c_str());
         }
     }
     assert(count == 1);
@@ -221,8 +220,8 @@ void select_prepared_statements_tests()
     for (DbStatement::Iterator i = dbs2.iterate(); i != dbs2.end(); ++i) {
         DbRowProxy row = *i;
         printf("%02d ------------------\n", count++);
-        for (unsigned i = 0; i != row.columnCount(); ++i) {
-            printf("%02u %s\n", i, row.getText(i).c_str());
+        for (unsigned j = 0; j != row.columnCount(); ++j) {
+            printf("%02u %s\n", j, row.getText(j).c_str());
         }
     }
     assert(count == 1);
@@ -236,14 +235,14 @@ void select_prepared_statements_tests()
     for (DbStatement::Iterator i = dbs3.iterate(); i != dbs3.end(); ++i) {
         DbRowProxy row = *i;
         printf("%02d ------------------\n", count++);
-        for (unsigned i = 0; i != row.columnCount(); ++i) {
-            printf("%02u %s\n", i, row.getText(i).c_str());
+        for (unsigned j = 0; j != row.columnCount(); ++j) {
+            printf("%02u %s\n", j, row.getText(j).c_str());
         }
     }
     assert(count == 1);
 }
 
-void blob_tests()
+static void blob_tests()
 {
     // create or attach database
     DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
@@ -275,7 +274,7 @@ void blob_tests()
     std::string str1(80, 'a');
     str1 += "\n";
     for (int i = 0; i != 4; ++i) {
-        blob.write(str1.c_str(), str1.length());
+        blob.write(str1.c_str(), static_cast<unsigned short>(str1.length()));
     }
     blob.write("zzzzzz", 6);
     blob.close();
@@ -304,7 +303,7 @@ void blob_tests()
     }
 }
 
-void print_all_datatypes()
+static void print_all_datatypes()
 {
     DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
     DbTransaction trans(dbc.nativeHandle(), 1);
@@ -354,13 +353,13 @@ void print_all_datatypes()
     for (DbStatement::Iterator i = st.iterate(); i != st.end(); ++i) {
         DbRowProxy row = *i;
         printf("%02d ------------------\n", count++);
-        for (unsigned i = 0; i != row.columnCount(); ++i) {
-            printf("%02u %s\n", i, row.getText(i).c_str());
+        for (unsigned j = 0; j != row.columnCount(); ++j) {
+            printf("%02u %s\n", j, row.getText(j).c_str());
         }
     }
 }
 
-void execute_procedure_tests()
+static void execute_procedure_tests()
 {
     // create or attach database
     DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
@@ -424,16 +423,16 @@ int main (int argc, char *argv[]) try
 
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "-server") == 0 && (i + 1) < argc) {
-            snprintf(g_dbServer, sizeof(g_dbServer), argv[i + 1]);
+            snprintf(g_dbServer, sizeof(g_dbServer), "%s", argv[i + 1]);
             ++i;
         } else if (strcmp(argv[i], "-name") == 0 && (i + 1) < argc) {
-            snprintf(g_dbName, sizeof(g_dbName), argv[i + 1]);
+            snprintf(g_dbName, sizeof(g_dbName), "%s", argv[i + 1]);
             ++i;
         } else if (strcmp(argv[i], "-user") == 0 && (i + 1) < argc) {
-            snprintf(g_dbUserName, sizeof(g_dbUserName), argv[i + 1]);
+            snprintf(g_dbUserName, sizeof(g_dbUserName), "%s", argv[i + 1]);
             ++i;
         } else  if (strcmp(argv[i], "-password") == 0 && (i + 1) < argc) {
-            snprintf(DB_PASSWORD, sizeof(DB_PASSWORD), argv[i + 1]);
+            snprintf(DB_PASSWORD, sizeof(DB_PASSWORD), "%s", argv[i + 1]);
             ++i;
         } else {
             printf("Unknown parameter: '%s'\n", argv[i]);
