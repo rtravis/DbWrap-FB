@@ -21,6 +21,9 @@
 #include "DbBlob.h"
 #include "DbTimeStamp.h"
 
+#include <time.h>
+#include <iomanip>
+
 #include <algorithm>
 
 namespace fb {
@@ -305,6 +308,28 @@ DbRowProxy::operator bool() const
     return (row_ != nullptr);
 }
 
+std::string DbRowProxy::formatDate(unsigned int idx, const std::string &format) const {
+
+    struct tm times;
+    const XSQLVAR &v1 = row_->sqlvar[idx];
+
+    switch (v1.sqltype & ~1){
+        case SQL_TYPE_DATE:
+            isc_decode_sql_date((ISC_DATE *) v1.sqldata, &times);
+            break;
+        case SQL_TIMESTAMP:
+            isc_decode_timestamp((ISC_TIMESTAMP *) v1.sqldata, &times);
+            break;
+        default:
+            throw std::logic_error("Field type is not blob!");
+    }
+
+    char buff[30];
+    strftime(buff, 30, format.c_str(), &times);
+
+    return buff;
+}
+
 DbFieldPtr DbRowProxy::fieldByName(const std::string& name) {
     if (row_) {
         auto it = fields.find(name);
@@ -320,17 +345,17 @@ DbFieldPtr DbRowProxy::fieldByName(const std::string& name) {
                 v1 = &(row_->sqlvar[i]);
                 if (v1->sqlname_length == len || v1->aliasname_length == len) {
                     if (Uname.compare(v1->sqlname) == 0 || Uname.compare(v1->aliasname) == 0) {
-                        DbFieldPtr field = std::make_shared<DbField>(this, row_, i);
+                        DbFieldPtr field = std::make_shared<DbField>(this, i);
                         fields[name] = field;
                         return field;
                     }
                 }
             }
-            throw FbException("Could not find matching column.", nullptr);
+            throw std::logic_error("Could not find matching column.");
         } else
             return it->second;
     } else
-        throw FbException("The row is not initialized.", nullptr);
+        throw std::logic_error("The row is not initialized.");
 }
 
 } /* namespace fb */
