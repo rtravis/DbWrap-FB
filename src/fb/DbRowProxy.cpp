@@ -25,6 +25,7 @@
 #include <iomanip>
 
 #include <algorithm>
+#include <cstring>
 
 namespace fb {
 
@@ -245,14 +246,16 @@ std::string DbRowProxy::getText(unsigned int idx) const
         break;
     case SQL_ARRAY:
         u1.iquad = ((const ISC_QUAD*) v1.sqldata);
-        snprintf(convBuf, sizeof(convBuf), "array %lx:%lx",
-                u1.iquad->gds_quad_high, u1.iquad->gds_quad_low);
+        snprintf(convBuf, sizeof(convBuf), "array %x:%x",
+                static_cast<unsigned>(u1.iquad->gds_quad_high),
+                static_cast<unsigned>(u1.iquad->gds_quad_low));
         buf = convBuf;
         break;
     case SQL_QUAD:
         u1.iquad = ((const ISC_QUAD*) v1.sqldata);
-        snprintf(convBuf, sizeof(convBuf), "%08lx:%08lx",
-                u1.iquad->gds_quad_high, u1.iquad->gds_quad_low);
+        snprintf(convBuf, sizeof(convBuf), "%08x:%08x",
+                static_cast<unsigned>(u1.iquad->gds_quad_high),
+                static_cast<unsigned>(u1.iquad->gds_quad_low));
         buf = convBuf;
         break;
     case SQL_TYPE_TIME:
@@ -330,32 +333,55 @@ std::string DbRowProxy::formatDate(unsigned int idx, const std::string &format) 
     return buff;
 }
 
-DbFieldPtr DbRowProxy::fieldByName(const std::string& name) {
+DbRowProxy::DbField DbRowProxy::fieldByName(const char* name) {
     if (row_) {
         auto it = fields.find(name);
         if (it == fields.end()) {
-            std::string Uname = name;
-            std::transform(Uname.begin(), Uname.end(), Uname.begin(),
-                    [](unsigned char c) {
-                        return std::toupper(c); }
-            );
-            int16_t len = Uname.length();
+            int len = std::strlen(name);
+            /*
+            std::string Uname;
+            int len = std::strlen(name);
+            for(int i = 0; i < len; ++i) 
+                Uname.append(1, std::toupper(name[i]));*/
+
             XSQLVAR *v1;
             for (int i = 0; i < row_->sqld; ++i) {
                 v1 = &(row_->sqlvar[i]);
                 if (v1->sqlname_length == len || v1->aliasname_length == len) {
-                    if (Uname.compare(v1->sqlname) == 0 || Uname.compare(v1->aliasname) == 0) {
-                        DbFieldPtr field = std::make_shared<DbField>(this, i);
-                        fields[name] = field;
-                        return field;
+                    if (std::strcmp(name, v1->sqlname) == 0 || std::strcmp(name, v1->aliasname) == 0) {
+                        fields[name] = i;
+                        return {this, static_cast<unsigned int>(i)};
                     }
                 }
             }
-            throw std::logic_error("Could not find matching column.");
+            return {nullptr, 0};
         } else
-            return it->second;
+            return {this, it->second};
     } else
-        throw std::logic_error("The row is not initialized.");
+        return {nullptr, 0};
+}
+
+DbRowProxy::DbField::DbField(DbRowProxy* rowProxy, unsigned int idx) 
+        :rowProxy(rowProxy), idx(idx){}
+
+DbRowProxy::DbField::operator bool() const{
+    return rowProxy != nullptr;
+}
+        
+int64_t DbRowProxy::DbField::asInteger() {
+    return rowProxy->getInt64(idx);
+}
+
+double DbRowProxy::DbField::asDouble() {
+    return std::strtod(rowProxy->getText(idx).c_str(), nullptr);
+}
+
+std::string DbRowProxy::DbField::asString() {
+    return rowProxy->getText(idx);
+}
+
+std::string DbRowProxy::DbField::formatDate(const std::string &format) {
+    return rowProxy->formatDate(idx, format);
 }
 
 } /* namespace fb */
