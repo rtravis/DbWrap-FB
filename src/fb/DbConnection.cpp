@@ -32,6 +32,8 @@ namespace fb {
     
 static DBConnectionParameters connectionParameters_;
 
+bool DbConnection::resolveParametersByName = false;
+
 void DbConnection::initConnectionParameters(DBConnectionParameters &connectionParameters) {
             connectionParameters_ = connectionParameters;
 }
