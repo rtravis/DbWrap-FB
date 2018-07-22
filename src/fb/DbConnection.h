@@ -100,6 +100,7 @@ public:
     const FbApiHandle *nativeHandle() const;
 
     static void initConnectionParameters(DBConnectionParameters &connectionParameters);
+    static bool resolveParametersByName;
 private:
     DbConnection(const DbConnection&) = delete;
     DbConnection& operator=(const DbConnection&) = delete;
