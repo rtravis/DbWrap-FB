@@ -167,13 +167,14 @@ void populate_database()
     dbs0.setText(3, nullptr);
     dbs0.execute();
 
-    // test prepared statements with named parameters max68
+    // test prepared statements with named parameters
     DbStatement dbs1 = dbc.createStatement(
             "INSERT INTO TEST1 (IID, I64_1, VAL4) VALUES (:IID, :I64_1, :VAL4) RETURNING (IID)",
             &trans);
-    dbs1.paramByName("IID")->setValue(100);
-    dbs1.paramByName("I64_1")->setValue(100);
-    dbs1.paramByName("VAL4")->setValue("a hundred");
+    // param name is case sensitive
+    dbs1.paramByName("IID").setValue(100);
+    dbs1.paramByName("I64_1").setValue(100);
+    dbs1.paramByName("VAL4").setValue("a hundred");
     dbs1.execute();
 
     // by committing the transaction we're not allowed to use it
@@ -201,7 +202,7 @@ void populate_database()
             printf("%02u %s\n", i, row.getText(i).c_str());
         }
     }
-    assert(count == 9); // max68
+    assert(count == 9);
 }
 
 void select_prepared_statements_tests()
@@ -257,7 +258,8 @@ void select_prepared_statements_tests()
     DbStatement dbs4 = dbc.createStatement(
                         "SELECT r.* FROM TEST1 r WHERE r.IID=:iid", &tr2);
 
-    dbs4.paramByName("iid")->setValue(100);
+    // param name is case sensitive
+    dbs4.paramByName("IID").setValue(100);
     count = 0;
     for (DbStatement::Iterator i = dbs4.iterate(); i != dbs2.end(); ++i) {
         DbRowProxy row = *i;
@@ -312,7 +314,7 @@ void blob_tests()
     st.setInt(1, 1);
     st.setText(2, "val1");
     st.setBlob(3, blob);
-    st.paramByName("MEMO_COPY")->setValue(blob);
+    st.paramByName("MEMO_COPY").setValue(blob);
     st.execute();
 
     // repeat the insert statement with different parameters
@@ -396,16 +398,15 @@ void print_all_datatypes()
     for (DbStatement::Iterator i = st1.iterate(); i != st1.end(); ++i) {
         DbRowProxy row = *i;
         printf("%02d ------------------\n", count++);
-
-        printf("ID     : %ld\n", row.fieldByName("ID")->asInteger());  
-        printf("ATTR_ID: %ld\n", row.fieldByName("ATTR_ID")->asInteger());  
-        printf("OBJ_ID : %ld\n", row.fieldByName("OBJ_ID")->asInteger());  
-        printf("INT_VAL: %ld\n", row.fieldByName("INT_VAL")->asInteger());  
-        printf("STR_VAL: %s\n", row.fieldByName("STR_VAL")->asString().c_str());  
-
-        printf("DATE_VAL: %s\n", row.fieldByName("DATE_VAL")->formatDate().c_str());  
-        printf("BLOB_VAL: %s\n", row.fieldByName("BLOB_VAL")->asString().c_str());  
-        printf("FLOAT_VAL: %f\n", row.fieldByName("FLOAT_VAL")->asDouble());  
+        // field name is case sensitive
+        printf("ID     : %ld\n", row.fieldByName("ID").asInteger());  
+        printf("ATTR_ID: %ld\n", row.fieldByName("ATTR_ID").asInteger());  
+        printf("OBJ_ID : %ld\n", row.fieldByName("OBJ_ID").asInteger());  
+        printf("INT_VAL: %ld\n", row.fieldByName("INT_VAL").asInteger());  
+        printf("STR_VAL: %s\n", row.fieldByName("STR_VAL").asString().c_str());  
+        printf("DATE_VAL: %s\n", row.fieldByName("DATE_VAL").formatDate().c_str());  
+        printf("BLOB_VAL: %s\n", row.fieldByName("BLOB_VAL").asString().c_str());  
+        printf("FLOAT_VAL: %f\n", row.fieldByName("FLOAT_VAL").asDouble());  
     }
 }
 
@@ -489,7 +490,10 @@ int main (int argc, char *argv[]) try
             return 1;
         }
     }
-
+    
+    // We are going to use parambyname
+    DbConnection::resolveParametersByName = true;
+    
     create_database();
     attach_database();
     populate_database();
