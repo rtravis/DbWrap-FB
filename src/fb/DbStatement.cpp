@@ -20,17 +20,19 @@
 #include "DbTransaction.h"
 #include "FbException.h"
 #include "FbInternals.h"
+#include "DbConnection.h"
 
 #include <ibase.h>
 
 #include <cassert>
 #include <memory>
-#include <string.h>
-
+#include <cstring>
+#include <cmath>
+/*
 #include <algorithm>
 #include <cctype>
-#include <cmath>
-
+#include <deque>
+*/
 namespace fb
 {
 
@@ -80,7 +82,8 @@ unsigned char *allocateAndSetXsqldaFields(XSQLDA *sqlda)
         if ((v1.sqltype & ~1) == SQL_VARYING) {
             v1.sqldata = (ISC_SCHAR*) p;
             // tell the engine we have more space
-            v1.sqllen += sizeof(ISC_SHORT);
+            v1.sqllen = static_cast<ISC_SHORT>(v1.sqllen
+                + static_cast<int>(sizeof(ISC_SHORT)));
         } else {
             p += sizeof(ISC_SHORT);
             p += pad_to_align((size_t) (p - fields), 8);
@@ -133,52 +136,57 @@ DbStatement::DbStatement(FbApiHandle *db,
     results_->sqld = 1;
     results_->version = SQLDA_VERSION1;
 
-    // preprocess sql for named parameters
-    int i = 0;
-    int j = 0;
-    int k = 0;
-    int cntPar = 0;
-    int l = strlen(sql);
-    char pSql[l];
-    char paramName[32];
-    while (sql[i] != '\0') {
-        switch (sql[i]) {
-            case '?':
-                pSql[j++] = sql[i++];
-                ++cntPar;
-                break;
-            case '\'':
-                pSql[j++] = sql[i++];
-                while (sql[i] != '\0' && sql[i] != '\'')
-                    pSql[j++] = sql[i++];
-                if (sql[i] == '\0')
-                    throw FbException("Preprocessing SQL error.", nullptr);
-                else
-                    pSql[j++] = sql[i++];
-                break;
-            case ':':
-                k = 0;
-                pSql[j++] = '?';
-                ++i;
-                while (std::isalpha(sql[i]) || std::isdigit(sql[i]) || sql[i] == '_') {
-                    paramName[k++] = std::toupper(sql[i++]);
-                }
-                if (k > 0 && k < 32) {
-                    paramName[k] = '\0';
-                    namedParameters[paramName] = ++cntPar;
-                } else
-                    throw FbException("Preprocessing SQL error.", nullptr);
-                break;
-            default:
-                pSql[j++] = sql[i++];
-                break;
+    if(DbConnection::resolveParametersByName) {
+        // preprocess sql for named parameters
+        std::string pSql;
+        int i = 0;
+        int k = 0;
+        int cntPar = 0;
+        
+        char paramName[32];
+        while (sql[i] != '\0') {
+            switch (sql[i]) {
+                case '?':
+                    pSql.append(1, sql[i++]);
+                    ++cntPar;
+                    break;
+                case '\'':
+                    pSql.append(1, sql[i++]);
+                    while (sql[i] != '\0' && sql[i] != '\'')
+                        pSql.append(1, sql[i++]);
+                    if (sql[i] == '\0')
+                        throw FbException("Preprocessing SQL error.", nullptr);
+                    else
+                        pSql.append(1, sql[i++]);
+                    break;
+                case ':':
+                    k = 0;
+                    pSql.append(1, '?');
+                    ++i;
+                    while ((std::isalpha(sql[i]) || std::isdigit(sql[i]) || sql[i] == '_') && k < 32) {
+                        paramName[k++] = std::toupper(sql[i++]);
+                    }
+                    if (k > 0 && k < 32) {
+                        paramName[k] = '\0';
+                        namedParameters[paramName] = ++cntPar;
+                    } else
+                        throw FbException("Preprocessing SQL error.", nullptr);
+                    break;
+                default:
+                    pSql.append(1, sql[i++]);
+                    break;
+            }
+        }
+        if (isc_dsql_prepare(status, trans_->nativeHandle(), &statement_, 0,
+                            pSql.c_str(), (short) FB_SQL_DIALECT, results_)) {
+            throw FbException("Failed to prepare statement.", status);
         }
     }
-    pSql[j] = '\0';
-    
-    if (isc_dsql_prepare(status, trans_->nativeHandle(), &statement_, 0,
-                        pSql, (short) FB_SQL_DIALECT, results_)) {
-        throw FbException("Failed to prepare statement.", status);
+    else {
+        if (isc_dsql_prepare(status, trans_->nativeHandle(), &statement_, 0,
+                            sql, (short) FB_SQL_DIALECT, results_)) {
+            throw FbException("Failed to prepare statement.", status);
+        }
     }
 
     ISC_SHORT columns = results_->sqld;
@@ -614,17 +622,42 @@ DbRowProxy DbStatement::Iterator::operator*()
                       *st_->trans_->nativeHandle());
 }
 
-StParameterPtr DbStatement::paramByName(const std::string& name) {
-    std::string Uname = name;
-    std::transform(Uname.begin(), Uname.end(), Uname.begin(),
-            [](unsigned char c) {
-                return std::toupper(c); }
-    );
-    auto it = namedParameters.find(Uname);
+DbStatement::StParameter DbStatement::paramByName(const char* name) {
+/*    std::string Uname;
+    std::size_t len = std::strlen(name);
+    for(std::size_t i = 0; i < len; ++i) 
+        Uname.append(1, std::toupper(name[i]));
+*/
+    auto it = namedParameters.find(name);
+    
     if (it == namedParameters.end())
-        throw FbException("Could not find matching parameter.", nullptr);
+        return {nullptr, 0};
 
-    return std::make_unique<StParameter>(this, it->second);
+    //return std::make_unique<StParameter>(this, it->second);
+    return {this, it->second};
 }
+
+DbStatement::StParameter::StParameter(DbStatement* st, unsigned int idx) :
+    st_(st), idx_(idx) {
+}
+
+
+DbStatement::StParameter::operator bool() const {
+    return st_ != nullptr;
+}
+
+void DbStatement::StParameter::setValue(short int v) { st_->setInt(idx_, v); };
+void DbStatement::StParameter::setValue(unsigned short int v) { st_->setInt(idx_, v); };
+void DbStatement::StParameter::setValue(int v) { st_->setInt(idx_, v); };
+void DbStatement::StParameter::setValue(unsigned int v) { st_->setInt(idx_, v); };
+void DbStatement::StParameter::setValue(long int v) { st_->setInt(idx_, v); };
+void DbStatement::StParameter::setValue(unsigned long int v) { st_->setInt(idx_, v); };
+void DbStatement::StParameter::setValue(long long int v) { st_->setInt(idx_, v); };
+void DbStatement::StParameter::setValue(unsigned long long int v) { st_->setInt(idx_, v); };
+void DbStatement::StParameter::setValue(float v)   { st_->setDouble(idx_, v); };
+void DbStatement::StParameter::setValue(double v)  { st_->setDouble(idx_, v); };
+void DbStatement::StParameter::setValue(const char* v){ st_->setText(idx_, v); };
+void DbStatement::StParameter::setValue(const DbBlob &v) { st_->setBlob(idx_, v); };
+void DbStatement::StParameter::setNull() { st_->setNull(idx_); };
 
 } /* namespace fb */
