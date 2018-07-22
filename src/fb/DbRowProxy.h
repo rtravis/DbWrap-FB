@@ -20,21 +20,36 @@
 #include <string>
 #include "FbCommon.h"
 
-#include <memory>
 #include <unordered_map>
 
 namespace fb {
 
 // forward declarations
 class DbBlob;
-class DbField; 
-
-using DbFieldPtr = std::shared_ptr<DbField>; // max68
 
 class DbRowProxy
 {
     friend class DbStatement;
 public:
+    class DbField {
+        friend class DbRowProxy;
+    private:
+        DbRowProxy* rowProxy;
+        unsigned int idx;
+    public:
+        DbField(DbRowProxy* rowProxy, unsigned int idx);
+
+        explicit operator bool() const;
+        
+        int64_t asInteger();
+
+        double asDouble();
+
+        std::string asString();
+
+        std::string formatDate(const std::string &format = "%Y-%m-%d");
+    };
+
     ~DbRowProxy();
 
     /** test if this is a valid row */
@@ -46,43 +61,17 @@ public:
     int64_t getInt64(unsigned int idx) const;
     std::string getText(unsigned int idx) const;
     DbBlob getBlob(unsigned int idx) const;
-    DbFieldPtr fieldByName(const std::string& name);
+    DbField fieldByName(const char* name);
     std::string formatDate(unsigned int idx, const std::string &format = "%Y-%m-%d") const;
 
 private:
-    std::unordered_map<std::string, DbFieldPtr> fields;
+    std::unordered_map<std::string, unsigned int> fields;
     DbRowProxy(SqlDescriptorArea *sqlda, FbApiHandle db, FbApiHandle tr);
 
     /** row_ is not owned by this */
     SqlDescriptorArea *row_;
     FbApiHandle db_;
     FbApiHandle transaction_;
-};
-
-class DbField {
-    //friend class DbRowProxy;
-private:
-    DbRowProxy* rowProxy;
-    unsigned int idx;
-public:
-    DbField(DbRowProxy* rowProxy, unsigned int idx) 
-    :rowProxy(rowProxy), idx(idx){};
-
-    int64_t asInteger() {
-        return rowProxy->getInt64(idx);
-    }
-
-    double asDouble() {
-        return std::strtod(rowProxy->getText(idx).c_str(), nullptr);
-    }
-
-    std::string asString() {
-        return rowProxy->getText(idx);
-    }
-
-    std::string formatDate(const std::string &format = "%Y-%m-%d") {
-        return rowProxy->formatDate(idx, format);
-    }
 };
 
 } /* namespace fb */
