@@ -64,7 +64,6 @@ struct DbCreateOptions
                 forced_writes_(forced_writes ? 1 : 0),
                 tryToCreateDb_(true),
                 db_schema_(initial_schema)
-
     {
     }
 };

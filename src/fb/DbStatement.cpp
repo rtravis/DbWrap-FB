@@ -37,7 +37,7 @@ namespace {
  * how much padding should we add to n so that it is a multiple of
  * blockSize (it aligns on an blockSize byte boundary)
  */
-inline size_t pad_to_align(size_t n, size_t blockSize)
+static inline size_t pad_to_align(size_t n, size_t blockSize)
 {
     size_t r = n % blockSize;
     return r ? (blockSize - r) : 0;
@@ -51,7 +51,7 @@ inline size_t pad_to_align(size_t n, size_t blockSize)
  * x-(x + sqllen) the field data, exception VARYING records start at offset 2
  * @remark the caller must delete [] the returned array
  */
-unsigned char *allocateAndSetXsqldaFields(XSQLDA *sqlda)
+static unsigned char *allocateAndSetXsqldaFields(XSQLDA *sqlda)
 {
     size_t fsize = 0;
     for (int i = 0; i != sqlda->sqld; ++i) {
@@ -178,19 +178,12 @@ DbStatement::DbStatement(FbApiHandle *db,
 }
 
 /** move constructor */
-DbStatement::DbStatement(DbStatement &&st)
+DbStatement::DbStatement(DbStatement &&st) :
+        results_(st.results_), fields_(st.fields_), inParams_(st.inParams_),
+        inFields_(st.inFields_), statement_(st.statement_), db_(st.db_),
+        trans_(st.trans_), ownsTransaction_(st.ownsTransaction_),
+        cursorOpened_(st.cursorOpened_), statementType_(st.statementType_)
 {
-    results_ = st.results_;
-    fields_ = st.fields_;
-    inParams_ = st.inParams_;
-    inFields_ = st.inFields_;
-    statement_ = st.statement_;
-    db_ = st.db_;
-    trans_ = st.trans_;
-    ownsTransaction_ = st.ownsTransaction_;
-    cursorOpened_ = st.cursorOpened_;
-    statementType_ = st.statementType_;
-
     st.results_ = nullptr;
     st.fields_ = nullptr;
     st.inParams_ = nullptr;
@@ -502,7 +495,7 @@ DbStatement::Iterator::Iterator(Iterator &&it) : st_(it.st_)
 
 DbStatement::Iterator &DbStatement::Iterator::operator++()
 {
-    assert(st_ != 0);
+    assert(st_);
 
     if (st_->statementType_ != isc_info_sql_stmt_select) {
         // we reached the end
@@ -531,7 +524,7 @@ bool DbStatement::Iterator::operator!=(const DbStatement::Iterator &other) const
 
 DbRowProxy DbStatement::Iterator::operator*()
 {
-    assert(st_ != 0);
+    assert(st_);
     return DbRowProxy(st_->results_,
                       st_->db_,
                       *st_->trans_->nativeHandle());

@@ -30,11 +30,10 @@
 
 namespace fb {
 
-DbConnection::DbConnection(const char *dbName,
-                           const char *server,
-                           const char *userName,
-                           const char *userPassword,
-                           const DbCreateOptions *opts) : db_(0)
+DbConnection::DbConnection(const char *dbName, const char *server,
+        const char *userName, const char *userPassword,
+        const DbCreateOptions *opts) :
+        connectMutex_(), db_(0)
 {
     // check some static assertions
     static_assert(sizeof(db_) == sizeof(isc_db_handle),
@@ -160,7 +159,7 @@ bool DbConnection::connect(const char *dbName, const char *server,
     isc_tr_handle dbTransaction = 0;
     rc = isc_dsql_execute_immediate(status, &db_, &dbTransaction,
                                     0, createDbSql.c_str(),
-                                    FB_SQL_DIALECT, NULL);
+                                    FB_SQL_DIALECT, nullptr);
 
     if (rc != 0) {
         throw FbException("create database", status);
@@ -225,7 +224,7 @@ void DbConnection::executeUpdate(const char *updateSql,
 
     ISC_STATUS_ARRAY status;
     if (isc_dsql_execute_immediate(status, &db_, transaction->nativeHandle(),
-                                   0, updateSql, FB_SQL_DIALECT, NULL)) {
+                                   0, updateSql, FB_SQL_DIALECT, nullptr)) {
         throw FbException("update/create/insert statement failed!", status);
     }
 

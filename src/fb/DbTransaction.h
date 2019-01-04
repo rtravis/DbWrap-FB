@@ -21,13 +21,13 @@
 namespace fb
 {
 
-enum class DefaultTransMode : char
+enum class DefaultTransMode : int
 {
     Commit = 0,
     Rollback
 };
 
-enum class TransStartMode : char
+enum class TransStartMode
 {
     DeferStart = 0,
     StartReadOnly,

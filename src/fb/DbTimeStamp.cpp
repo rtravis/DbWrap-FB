@@ -39,7 +39,7 @@ std::string DbDate::iso8601Date() const
 {
     struct tm tm1;
     isc_decode_sql_date(&isc_date_, &tm1);
-    char buf[16];
+    char buf[32];
     snprintf(buf, sizeof(buf), "%04d-%02d-%02d",
             tm1.tm_year + 1900, tm1.tm_mon + 1, tm1.tm_mday);
     return buf;
@@ -86,7 +86,7 @@ std::string DbTimeStamp::iso8601DateTime() const
 {
     struct tm tm1;
     isc_decode_timestamp(reinterpret_cast<const ISC_TIMESTAMP*>(&isc_ts_), &tm1);
-    char buf[24];
+    char buf[40];
     snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d:%02d",
             tm1.tm_year + 1900, tm1.tm_mon + 1, tm1.tm_mday,
             tm1.tm_hour, tm1.tm_min, tm1.tm_sec);
