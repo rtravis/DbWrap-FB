@@ -413,8 +413,52 @@ static void execute_procedure_tests()
     trans.commit();
 }
 
-} // namespace fbunittest
+static void event_callback(void *data, const char *eventName, int eventCount)
+{
+    int *counter = static_cast<int*>(data);
+    *counter += eventCount;
 
+    printf("Event '%s' triggered, count: %d, total: %d\n", eventName,
+            eventCount, *counter);
+}
+
+static void test_events()
+{
+    // create or attach database
+    DbConnection dbc(g_dbName, g_dbServer, g_dbUserName, DB_PASSWORD);
+    DbTransaction trans(dbc.nativeHandle(), 1);
+
+    int eventCounter = 0;
+    dbc.enableEvents(event_callback, &eventCounter, { "TEST", "ODIN" });
+
+    try {
+        dbc.executeUpdate(
+                "CREATE TRIGGER odin_event ACTIVE ON TRANSACTION COMMIT AS BEGIN POST_EVENT 'ODIN' ; END");
+    } catch (FbException &) {
+    }
+
+    drop_table_if_exists(dbc, trans, "EMPLOYEE");
+    trans.commitRetain();
+
+    // create a test table
+    dbc.executeUpdate(
+            "CREATE TABLE EMPLOYEE ("
+                "ID    INTEGER, "
+                "NAME  VARCHAR(80), "
+                "EXT   VARCHAR(6) DEFAULT NULL, "
+                "EMAIL VARCHAR(100) DEFAULT NULL, "
+                "CONSTRAINT PK_EMPLOYEE PRIMARY KEY (ID))");
+
+    dbc.executeUpdate("GRANT ALL ON Employee TO PUBLIC WITH GRANT OPTION");
+    dbc.executeUpdate("INSERT INTO Employee (ID, NAME, EXT) VALUES (1,'Alice', '101')");
+    dbc.executeUpdate("INSERT INTO Employee (ID, NAME, EXT) VALUES (2,'Bob', '102')");
+
+    dbc.disableEvents();
+    assert(eventCounter >= 2);
+    printf("events count is: %d\n", eventCounter);
+}
+
+} // namespace fbunittest
 
 int main (int argc, char *argv[]) try
 {
@@ -447,6 +491,7 @@ int main (int argc, char *argv[]) try
     blob_tests();
     print_all_datatypes();
     execute_procedure_tests();
+    test_events();
     std::cout << "Firebird API Test completed successfully.\n";
 
     return 0;

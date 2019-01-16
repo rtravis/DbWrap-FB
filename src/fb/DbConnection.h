@@ -18,8 +18,9 @@
 
 #include "FbCommon.h"
 
-#include <memory>
 #include <mutex>
+#include <string>
+#include <vector>
 
 
 namespace fb
@@ -28,6 +29,18 @@ namespace fb
 // forward declarations
 class DbTransaction;
 class DbStatement;
+
+/**
+ * used defined database events callback function set by `enableEvents`
+ *
+ * \param callbackData user defined callback data, it is the same value as the
+ *  second argument passed to `enableEvents`
+ * \param eventName the name of the event that was triggered, represented as a
+ *  null terminated string
+ * \param eventCount how many times the event was triggered
+ * \remark event callback support is experimental
+ */
+using EventCallback = void (*)(void *callbackData, const char *eventName, int eventCount);
 
 struct DbObjectInfo
 {
@@ -52,17 +65,17 @@ struct DbCreateOptions
     /*
      * try to create database if it does not exist
      */
-    bool tryToCreateDb_;
+    bool try_create_db_;
 
     DbObjectInfo const * const db_schema_;
 
-    /** Initialise with the create options with sensible defaults. */
+    /** Initialise the create options with sensible defaults. */
     explicit DbCreateOptions(int page_size = 8192,
                              bool forced_writes = false,
                              const DbObjectInfo *initial_schema = nullptr)
               : page_size_(page_size),
                 forced_writes_(forced_writes ? 1 : 0),
-                tryToCreateDb_(true),
+                try_create_db_(true),
                 db_schema_(initial_schema)
     {
     }
@@ -89,6 +102,11 @@ public:
 
     const FbApiHandle *nativeHandle() const;
 
+    /** event handling is experimental, use at own risk */
+    void enableEvents(EventCallback callback, void *callbackData,
+            const std::vector<std::string> &eventNames);
+    void disableEvents();
+
 private:
     DbConnection(const DbConnection&) = delete;
     DbConnection& operator=(const DbConnection&) = delete;
@@ -100,6 +118,9 @@ private:
 
     std::mutex connectMutex_;
     FbApiHandle db_; /** database handle isc_db_handle a.k.a unsigned int */
+
+    struct EventSettings;
+    EventSettings *eventSettings_; /** event settings if enabled, otherwise null */
 };
 
 } /* namespace fb */
