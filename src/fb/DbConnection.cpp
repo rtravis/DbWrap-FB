@@ -21,6 +21,7 @@
 
 #include <ibase.h>
 
+#include <array>
 #include <cassert>
 #include <cstring>
 #include <memory>

@@ -80,7 +80,7 @@ void DbTransaction::start(bool readOnly /* = false */)
             // isc_tpb_lock_write
     };
 
-    struct  ISC_TEB
+    struct  ISC_TEB // do not mess with the memory layout of this structure
     {
         const ISC_LONG *db_ptr;
         ISC_LONG tpb_len;

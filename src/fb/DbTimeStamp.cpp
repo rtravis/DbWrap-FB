@@ -14,6 +14,8 @@
  */
 
 #include "DbTimeStamp.h"
+
+#include <ctime>
 #include <ibase.h>
 
 namespace fb

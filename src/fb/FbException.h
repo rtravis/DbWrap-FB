@@ -28,8 +28,8 @@ public:
     FbException(const char *operation, const intptr_t *status);
     FbException(const FbException&) = default;
 
-    virtual ~FbException() noexcept;
-    virtual const char *what() const noexcept;
+    virtual ~FbException() noexcept override;
+    virtual const char *what() const noexcept override;
 
 private:
     std::string what_;
